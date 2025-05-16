@@ -1,0 +1,157 @@
+@model ProjectManagement.ViewModels.ProjectAssignmentViewModel
+@using Microsoft.AspNetCore.Identity
+@using ProjectManagement.Models
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = "Project Team";
+    var currentUser = await UserManager.GetUserAsync(User);
+    var isAdmin = User.IsInRole("Admin");
+}
+
+<div class="container">
+    <h1>@Model.ProjectName - Team Management</h1>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Current Team Members</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.CurrentAssignments.Any() || Model.CurrentShadowAssignments.Any())
+                    {
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Type</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var assignment in Model.CurrentAssignments)
+                                {
+                                    <tr>
+                                        <td>@assignment.User?.FullName</td>
+                                        <td>@assignment.Role</td>
+                                        <td>
+                                            <span class="badge bg-primary">Direct Assignment</span>
+                                        </td>
+                                        <td>
+                                            @if (isAdmin)
+                                            {
+                                                <form asp-action="RemoveAssignment" asp-route-id="@assignment.Id" method="post" 
+                                                      onsubmit="return confirm('Are you sure you want to remove this team member?');">
+                                                    <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                                                </form>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                                @foreach (var shadowAssignment in Model.CurrentShadowAssignments)
+                                {
+                                    <tr>
+                                        <td>@shadowAssignment.ShadowResource?.FullName</td>
+                                        <td>@shadowAssignment.Role</td>
+                                        <td>
+                                            <span class="badge bg-secondary">Shadow Resource</span>
+                                        </td>
+                                        <td>
+                                            @if (isAdmin || shadowAssignment.ProjectOnBoardUserId == currentUser.Id)
+                                            {
+                                                <form asp-action="RemoveShadowAssignment" asp-route-id="@shadowAssignment.Id" method="post" 
+                                                      onsubmit="return confirm('Are you sure you want to remove this shadow resource?');">
+                                                    <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                                                </form>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            No team members assigned to this project.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>@(isAdmin ? "Assign Team Member" : "Add Shadow Resource")</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="@(isAdmin ? "AssignEmployee" : "AssignShadowResource")" method="post">
+                        <input type="hidden" asp-for="ProjectId" />
+                        <input type="hidden" asp-for="ProjectName" />
+                        <input type="hidden" asp-for="IsShadowResource" value="@(!isAdmin)" />
+
+                        <div class="form-group mb-3">
+                            <label asp-for="UserId" class="form-label">Select @(isAdmin ? "Employee" : "Shadow Resource")</label>
+                            <select asp-for="UserId" class="form-control">
+                                <option value="">-- Select @(isAdmin ? "Employee" : "Shadow Resource") --</option>
+                                @foreach (var employee in Model.AvailableEmployees)
+                                {
+                                    // For admins: skip employees who are already directly assigned
+                                    // For employees: skip those who are already shadow resources for this project
+                                    bool isAlreadyAssigned = isAdmin 
+                                        ? Model.CurrentAssignments.Any(a => a.UserId == employee.Id)
+                                        : Model.CurrentShadowAssignments.Any(a => a.ShadowResourceId == employee.Id);
+                                        
+                                    if (!isAlreadyAssigned && (isAdmin || employee.Id != currentUser.Id))
+                                    {
+                                        <option value="@employee.Id">@employee.FullName</option>
+                                    }
+                                }
+                            </select>
+                            <span asp-validation-for="UserId" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Role" class="form-label">Role in Project</label>
+                            <select asp-for="Role" class="form-control">
+                                @if (isAdmin)
+                                {
+                                    <option value="Developer">Developer</option>
+                                    <option value="Tester">Tester</option>
+                                    <option value="Business Analyst">Business Analyst</option>
+                                    <option value="Designer">Designer</option>
+                                    <option value="Project Manager">Project Manager</option>
+                                    <option value="Other">Other</option>
+                                }
+                                else
+                                {
+                                    <option value="External Consultant">External Consultant</option>
+                                    <option value="Contractor">Contractor</option>
+                                    <option value="Advisor">Advisor</option>
+                                    <option value="Subject Matter Expert">Subject Matter Expert</option>
+                                    <option value="Other External">Other External</option>
+                                }
+                            </select>
+                            <span asp-validation-for="Role" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <button type="submit" class="btn btn-primary">@(isAdmin ? "Add to Team" : "Add Shadow Resource")</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a asp-action="Details" asp-route-id="@Model.ProjectId" class="btn btn-secondary">Back to Project</a>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+} 

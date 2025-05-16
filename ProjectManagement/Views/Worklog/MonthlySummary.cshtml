@@ -1,0 +1,150 @@
+@model ProjectManagement.ViewModels.MonthlySummaryViewModel
+@using System.Globalization;
+
+@{
+    ViewData["Title"] = "Monthly Summaries";
+    var monthNames = DateTimeFormatInfo.CurrentInfo.MonthNames;
+}
+
+<div class="container">
+    <h1>@Model.ProjectName - Monthly Summaries</h1>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Generate New Summary</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="GenerateSummary" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        <input type="hidden" asp-for="ProjectId" />
+                        <input type="hidden" asp-for="ProjectName" />
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="Year" class="form-label">Year</label>
+                                <input asp-for="Year" class="form-control" type="number" min="2000" max="@(DateTime.Now.Year + 1)" />
+                                <span asp-validation-for="Year" class="text-danger"></span>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label asp-for="Month" class="form-label">Month</label>
+                                <select asp-for="Month" class="form-select">
+                                    @for (int i = 1; i <= 12; i++)
+                                    {
+                                        <option value="@i">@monthNames[i - 1]</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="Month" class="text-danger"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input asp-for="IncludeShadowResources" class="form-check-input" type="checkbox" />
+                            <label asp-for="IncludeShadowResources" class="form-check-label">Include Shadow Resources</label>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <p>Generating a summary will calculate the total hours worked by each team member for the selected month
+                            and create a report that can be viewed and exported. This will replace any existing summary for the same month.</p>
+                        </div>
+                        
+                        <div class="form-group mt-3">
+                            <button type="submit" class="btn btn-primary">Generate Summary</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Existing Summaries</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.ExistingSummaries.Any())
+                    {
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Period</th>
+                                    <th>Team Member</th>
+                                    <th>Total Hours</th>
+                                    <th>Shadow Resources</th>
+                                    <th>Generated On</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var summary in Model.ExistingSummaries)
+                                {
+                                    <tr>
+                                        <td>@monthNames[summary.Month - 1] @summary.Year</td>
+                                        <td>@summary.User?.FullName</td>
+                                        <td>@summary.TotalHours</td>
+                                        <td>
+                                            @if (summary.IncludesShadowWork)
+                                            {
+                                                <span class="badge bg-success">Included</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Excluded</span>
+                                            }
+                                        </td>
+                                        <td>@summary.GeneratedAt.ToString("g")</td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-info" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#summaryModal-@summary.Id">
+                                                View Details
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    
+                                    <!-- Modal for Summary Details -->
+                                    <div class="modal fade" id="summaryModal-@summary.Id" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">
+                                                        Summary: @summary.User?.FullName - @monthNames[summary.Month - 1] @summary.Year
+                                                    </h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <pre>@summary.Summary</pre>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <p>No monthly summaries have been generated yet.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <a asp-action="Project" asp-route-id="@Model.ProjectId" class="btn btn-secondary">Back to Worklogs</a>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+} 

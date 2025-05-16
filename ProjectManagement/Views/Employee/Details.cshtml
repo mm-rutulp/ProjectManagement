@@ -1,0 +1,147 @@
+@model ProjectManagement.ViewModels.EmployeeDetailsViewModel
+
+@{
+    ViewData["Title"] = "Employee Details";
+}
+
+<div class="container">
+    <h1>@Model.Employee.FullName</h1>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Employee Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Email</dt>
+                        <dd class="col-sm-8">@Model.Employee.Email</dd>
+
+                        <dt class="col-sm-4">Department</dt>
+                        <dd class="col-sm-8">@Model.Employee.Department</dd>
+
+                        <dt class="col-sm-4">Position</dt>
+                        <dd class="col-sm-8">@Model.Employee.Position</dd>
+                    </dl>
+                </div>
+                <div class="card-footer">
+                    <div class="btn-group">
+                        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                        <a asp-action="Edit" asp-route-id="@Model.Employee.Id" class="btn btn-warning">Edit</a>
+                        <a asp-action="Delete" asp-route-id="@Model.Employee.Id" class="btn btn-danger">Delete</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Assigned Projects</h5>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.ProjectAssignments.Any() || Model.ShadowResourceAssignments.Any())
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var assignment in Model.ProjectAssignments)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <a asp-controller="Project" asp-action="Details" asp-route-id="@assignment.ProjectId">
+                                            @assignment.Project?.Name
+                                        </a>
+                                        <span class="badge bg-primary ms-2">@assignment.Role</span>
+                                        <span class="badge bg-primary ms-2">Direct Assignment</span>
+                                    </div>
+                                    <small class="text-muted">Since @assignment.AssignedDate.ToShortDateString()</small>
+                                </li>
+                            }
+                            @foreach (var shadowAssignment in Model.ShadowResourceAssignments)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <a asp-controller="Project" asp-action="Details" asp-route-id="@shadowAssignment.ProjectId">
+                                            @shadowAssignment.Project?.Name
+                                        </a>
+                                        <span class="badge bg-primary ms-2">@shadowAssignment.Role</span>
+                                        <span class="badge bg-secondary ms-2">Shadow Resource</span>
+                                    </div>
+                                    <small class="text-muted">Since @shadowAssignment.AssignedDate.ToShortDateString()</small>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info m-3">
+                            <p>No projects assigned to this employee.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Recent Worklogs</h5>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.RecentWorklogs.Any())
+                    {
+                        <table class="table table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Project</th>
+                                    <th>Hours</th>
+                                    <th>Description</th>
+                                    <th>Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var worklog in Model.RecentWorklogs)
+                                {
+                                    <tr>
+                                        <td>@worklog.Date.ToShortDateString()</td>
+                                        <td>
+                                            <a asp-controller="Project" asp-action="Details" asp-route-id="@worklog.ProjectId">
+                                                @worklog.Project?.Name
+                                            </a>
+                                        </td>
+                                        <td>@worklog.HoursWorked</td>
+                                        <td>@worklog.Description</td>
+                                        <td>
+                                            @if (worklog.IsShadowResourceWorklog)
+                                            {
+                                                <span class="badge bg-secondary">Shadow Resource</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-primary">Direct</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info m-3">
+                            <p>No worklogs found for this employee.</p>
+                        </div>
+                    }
+                </div>
+                <div class="card-footer">
+                    <a asp-controller="Worklog" asp-action="Index" asp-route-userId="@Model.Employee.Id" class="btn btn-outline-primary">
+                        View All Worklogs
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

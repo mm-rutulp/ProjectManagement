@@ -1,0 +1,191 @@
+﻿@model ProjectManagement.ViewModels.DashboardViewModel
+@using Microsoft.AspNetCore.Identity
+@using ProjectManagement.Models
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+
+@{
+    ViewData["Title"] = "Dashboard";
+    var currentUser = await UserManager.GetUserAsync(User);
+    var isAdmin = User.IsInRole("Admin");
+}
+
+<div class="container">
+    <h1>Dashboard</h1>
+    
+    @if (SignInManager.IsSignedIn(User))
+    {
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Projects</h5>
+                        <h2 class="card-text">@Model.TotalProjects</h2>
+                        <p class="card-text"><small>@Model.ActiveProjects active</small></p>
+                    </div>
+                </div>
+            </div>
+            
+            @if (isAdmin)
+            {
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Employees</h5>
+                            <h2 class="card-text">@Model.TotalEmployees</h2>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Hours Logged</h5>
+                            <h2 class="card-text">@Model.TotalHours</h2>
+                        </div>
+                    </div>
+                </div>
+            }
+            
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Worklogs</h5>
+                        <h2 class="card-text">@Model.TotalWorklogs</h2>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="card bg-warning text-dark">
+                    <div class="card-body">
+                        <h5 class="card-title">Quick Actions</h5>
+                        <a href="@Url.Action("Index", "Project")" class="btn btn-sm btn-light mb-2 w-100">View Projects</a>
+                        @if (!isAdmin)
+                        {
+                            <a href="@Url.Action("Index", "Worklog")" class="btn btn-sm btn-light w-100">My Worklogs</a>
+                        }
+                        else
+                        {
+                            <a href="@Url.Action("Create", "Project")" class="btn btn-sm btn-light w-100">New Project</a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                @if (isAdmin && Model.RecentProjects.Any())
+                {
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Recent Projects</h5>
+                            <a asp-controller="Project" asp-action="Index" class="btn btn-outline-primary btn-sm">View All</a>
+                        </div>
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush">
+                                @foreach (var project in Model.RecentProjects)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <a asp-controller="Project" asp-action="Details" asp-route-id="@project.Id">
+                                                @project.Name
+                                            </a>
+                                            <span class="badge bg-primary ms-2">@project.Status</span>
+                                        </div>
+                                        <small class="text-muted">@project.StartDate.ToShortDateString()</small>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+                else if (!isAdmin && Model.UserProjects.Any())
+                {
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">My Projects</h5>
+                            <a asp-controller="Project" asp-action="Index" class="btn btn-outline-primary btn-sm">View All</a>
+                        </div>
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush">
+                                @foreach (var project in Model.UserProjects)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <a asp-controller="Project" asp-action="Details" asp-route-id="@project.Id">
+                                                @project.Name
+                                            </a>
+                                            <span class="badge bg-primary ms-2">@project.Status</span>
+                                        </div>
+                                        <div>
+                                            <a asp-controller="Worklog" asp-action="Create" asp-route-id="@project.Id" 
+                                               class="btn btn-outline-success btn-sm">Log Work</a>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <div class="col-md-6">
+                @if (Model.RecentWorklogs.Any())
+                {
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Recent Worklogs</h5>
+                            @if (isAdmin)
+                            {
+                                <a asp-controller="Project" asp-action="Index" class="btn btn-outline-primary btn-sm">View Projects</a>
+                            }
+                            else
+                            {
+                                <a asp-controller="Worklog" asp-action="Index" class="btn btn-outline-primary btn-sm">View All</a>
+                            }
+                        </div>
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush">
+                                @foreach (var worklog in Model.RecentWorklogs)
+                                {
+                                    <li class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <strong>
+                                                <a asp-controller="Project" asp-action="Details" asp-route-id="@worklog.ProjectId">
+                                                    @worklog.Project?.Name
+                                                </a>
+                                            </strong>
+                                            <span class="badge bg-primary">@worklog.HoursWorked hours</span>
+                                        </div>
+                                        <p class="mb-1">@worklog.Description</p>
+                                        <div class="d-flex justify-content-between">
+                                            <small class="text-muted">@worklog.Date.ToShortDateString()</small>
+                                            @if (isAdmin)
+                                            {
+                                                <small class="text-muted">By: @worklog.User?.FullName</small>
+                                            }
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="jumbotron">
+            <h1 class="display-4">Welcome to Project Management</h1>
+            <p class="lead">A comprehensive system for managing projects, teams, and work logs.</p>
+            <hr class="my-4">
+            <p>Please log in to access the system.</p>
+            <a class="btn btn-primary btn-lg" asp-controller="Account" asp-action="Login" role="button">Log In</a>
+        </div>
+    }
+</div>
