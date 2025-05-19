@@ -2,122 +2,88 @@
 @using Microsoft.AspNetCore.Identity
 @using ProjectManagement.Models
 @inject UserManager<ApplicationUser> UserManager
-@inject SignInManager<ApplicationUser> SignInManager
 
 @{
-    ViewData["Title"] = "Projects";
+    ViewData["Title"] = "All Projects";
+    var currentUser = await UserManager.GetUserAsync(User);
     var isAdmin = User.IsInRole("Admin");
 }
 
-<div class="container">
-    <h1>@ViewData["Title"]</h1>
-
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <h1 class="text-primary">All Projects</h1>
     @if (isAdmin)
     {
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <a asp-action="Create" class="btn btn-primary">Create New Project</a>
-            <button id="clearTestDataBtn" class="btn btn-danger">Clear Test Data</button>
-        </div>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Create New Project
+        </a>
     }
-    else
+</div>
+
+<div class="row g-4">
+    @foreach (var project in Model)
     {
-        <p>
-            <a asp-action="Create" class="btn btn-primary">Create New Project</a>
-        </p>
-    }
-
-    <div id="clearDataMessage" class="alert d-none">
-    </div>
-
-    <div class="row">
-        @foreach (var item in Model)
-        {
-            <div class="col-md-4 mb-4">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">@item.Name</h5>
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100" style="background-color: #f8f9fa;">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-truncate" style="max-width: 70%;">@project.Name</h5>
+                        <span class="badge @(project.Status == "Active" ? "bg-success" : "bg-primary") ms-2">
+                            @project.Status
+                        </span>
                     </div>
-                    <div class="card-body">
-                        <p class="card-text"><small class="text-muted">Status: <span class="badge bg-primary">@item.Status</span></small></p>
-                        <p class="card-text">@(item.Description?.Length > 100 ? item.Description.Substring(0, 100) + "..." : item.Description)</p>
-                        <p class="card-text">
-                            <small class="text-muted">
-                                Start Date: @item.StartDate.ToShortDateString()<br />
-                                @if (item.EndDate.HasValue)
-                                {
-                                    <span>End Date: @item.EndDate.Value.ToShortDateString()</span>
-                                }
-                            </small>
-                        </p>
-                    </div>
-                    <div class="card-footer">
-                        <div class="btn-group" role="group">
-                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Details</a>
-                            <a asp-action="Assign" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Team</a>
-                            <a asp-controller="Worklog" asp-action="Project" asp-route-id="@item.Id" class="btn btn-sm btn-outline-success">Worklogs</a>
-                            @if (isAdmin)
-                            {
-                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-warning">Edit</a>
-                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">Delete</a>
-                            }
+                </div>
+                <div class="card-body">
+                    <p class="card-text mb-3" style="color: #495057;">
+                        @(project.Description?.Length > 100 ? project.Description.Substring(0, 100) + "..." : project.Description)
+                    </p>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="d-flex align-items-center" style="color: #6c757d;">
+                            <i class="bi bi-calendar me-2"></i>
+                            <span>Start: @project.StartDate.ToString("MMM dd, yyyy")</span>
+                        </div>
+                        <div class="d-flex align-items-center" style="color: #6c757d;">
+                            <i class="bi bi-calendar-check me-2"></i>
+                            <span>End: @(project.EndDate?.ToString("MMM dd, yyyy") ?? "Not set")</span>
                         </div>
                     </div>
                 </div>
+                <div class="card-footer">
+                    <div class="d-grid gap-2">
+                        <div class="btn-group w-100">
+                            <a asp-action="Details" asp-route-id="@project.Id" class="btn btn-outline-primary">
+                                <i class="bi bi-info-circle me-1"></i> Details
+                            </a>
+                            <a asp-controller="Worklog" asp-action="Project" asp-route-id="@project.Id" class="btn btn-outline-secondary">
+                                <i class="bi bi-clock me-1"></i> Worklogs
+                            </a>
+                        </div>
+                        @if (isAdmin)
+                        {
+                            <div class="btn-group w-100">
+                                <a asp-action="Edit" asp-route-id="@project.Id" class="btn btn-outline-warning">
+                                    <i class="bi bi-pencil me-1"></i> Edit
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@project.Id" class="btn btn-outline-danger">
+                                    <i class="bi bi-trash me-1"></i> Delete
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
             </div>
-        }
-    </div>
-
-    @if (!Model.Any())
-    {
-        <div class="alert alert-info">
-            <p>No projects found.</p>
         </div>
     }
 </div>
 
-@section Scripts {
-    @if (isAdmin)
-    {
-        <script>
-            document.getElementById('clearTestDataBtn').addEventListener('click', function() {
-                if (confirm('Are you sure you want to clear all project-related test data? This will delete all projects, assignments, worklogs, and monthly summaries.')) {
-                    clearTestData();
-                }
-            });
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No projects found.
+    </div>
+}
 
-            function clearTestData() {
-                const token = $('input[name="__RequestVerificationToken"]').val();
-                
-                $.ajax({
-                    url: '/api/Project/ClearTestData',
-                    type: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': token
-                    },
-                    success: function(data) {
-                        const messageDiv = document.getElementById('clearDataMessage');
-                        messageDiv.classList.remove('d-none', 'alert-success', 'alert-danger');
-                        
-                        if (data.success) {
-                            messageDiv.classList.add('alert-success');
-                            messageDiv.textContent = data.message;
-                            // Reload the page after 2 seconds to show the changes
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 2000);
-                        } else {
-                            messageDiv.classList.add('alert-danger');
-                            messageDiv.textContent = data.message;
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        const messageDiv = document.getElementById('clearDataMessage');
-                        messageDiv.classList.remove('d-none', 'alert-success');
-                        messageDiv.classList.add('alert-danger');
-                        messageDiv.textContent = 'Error: ' + error;
-                    }
-                });
-            }
-        </script>
-    }
+@section Scripts {
+    <script>
+        // Add any JavaScript for project management functionality here
+    </script>
 } 

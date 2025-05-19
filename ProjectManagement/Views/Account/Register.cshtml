@@ -1,72 +1,59 @@
 @model ProjectManagement.ViewModels.RegisterViewModel
-
 @{
-    ViewData["Title"] = "Register New User";
+    ViewData["Title"] = "Register";
+    Layout = "_AuthLayout";
 }
 
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h4>@ViewData["Title"]</h4>
-            </div>
-            <div class="card-body">
-                <form asp-controller="Account" asp-action="Register" method="post">
-                    <div asp-validation-summary="All" class="text-danger"></div>
-                    <div class="form-group mb-3">
-                        <label asp-for="Email" class="form-label"></label>
-                        <input asp-for="Email" class="form-control" />
-                        <span asp-validation-for="Email" class="text-danger"></span>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label asp-for="FullName" class="form-label"></label>
-                        <input asp-for="FullName" class="form-control" />
-                        <span asp-validation-for="FullName" class="text-danger"></span>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label asp-for="Department" class="form-label"></label>
-                                <input asp-for="Department" class="form-control" />
-                                <span asp-validation-for="Department" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label asp-for="Position" class="form-label"></label>
-                                <input asp-for="Position" class="form-control" />
-                                <span asp-validation-for="Position" class="text-danger"></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label asp-for="Role" class="form-label"></label>
-                        <select asp-for="Role" class="form-control">
-                            <option value="Admin">Admin</option>
-                            <option value="Employee">Employee</option>
-                        </select>
-                        <span asp-validation-for="Role" class="text-danger"></span>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label asp-for="Password" class="form-label"></label>
-                        <input asp-for="Password" class="form-control" />
-                        <span asp-validation-for="Password" class="text-danger"></span>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label asp-for="ConfirmPassword" class="form-label"></label>
-                        <input asp-for="ConfirmPassword" class="form-control" />
-                        <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
-                    </div>
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary">Register</button>
-                        <a asp-controller="Employee" asp-action="Index" class="btn btn-secondary">Cancel</a>
-                    </div>
-                </form>
-            </div>
-        </div>
+<div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+
+<form asp-action="Register" method="post">
+    <div class="form-floating">
+        <input asp-for="Email" class="form-control" placeholder="name@example.com" />
+        <label asp-for="Email">Email address</label>
+        <span asp-validation-for="Email" class="text-danger"></span>
     </div>
-</div>
+
+    <div class="form-floating">
+        <input asp-for="FullName" class="form-control" placeholder="Full Name" />
+        <label asp-for="FullName">Full Name</label>
+        <span asp-validation-for="FullName" class="text-danger"></span>
+    </div>
+
+    <div class="form-floating">
+        <input asp-for="Department" class="form-control" placeholder="Department" />
+        <label asp-for="Department">Department</label>
+        <span asp-validation-for="Department" class="text-danger"></span>
+    </div>
+
+    <div class="form-floating">
+        <input asp-for="Position" class="form-control" placeholder="Position" />
+        <label asp-for="Position">Position</label>
+        <span asp-validation-for="Position" class="text-danger"></span>
+    </div>
+
+    <div class="form-floating">
+        <input asp-for="Password" class="form-control" placeholder="Password" />
+        <label asp-for="Password">Password</label>
+        <span asp-validation-for="Password" class="text-danger"></span>
+    </div>
+
+    <div class="form-floating">
+        <input asp-for="ConfirmPassword" class="form-control" placeholder="Confirm Password" />
+        <label asp-for="ConfirmPassword">Confirm Password</label>
+        <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+        <i class="bi bi-person-plus"></i> Register
+    </button>
+
+    <div class="auth-footer mt-3">
+        <p>
+            Already have an account? <a asp-action="Login">Sign in</a>
+        </p>
+    </div>
+</form>
 
 @section Scripts {
-    @await Html.PartialAsync("_ValidationScriptsPartial")
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 } 
