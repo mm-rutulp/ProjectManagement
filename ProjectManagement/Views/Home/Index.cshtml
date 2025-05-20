@@ -63,11 +63,7 @@
                     <div class="card-body">
                         <h5 class="card-title">Quick Actions</h5>
                         <a href="@Url.Action("Index", "Project")" class="btn btn-sm btn-light mb-2 w-100">View Projects</a>
-                        @if (!isAdmin)
-                        {
-                            <a href="@Url.Action("Index", "Worklog")" class="btn btn-sm btn-light w-100">My Worklogs</a>
-                        }
-                        else
+                        @if (isAdmin)
                         {
                             <a href="@Url.Action("Create", "Project")" class="btn btn-sm btn-light w-100">New Project</a>
                         }

@@ -237,5 +237,68 @@ namespace ProjectManagement.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+
+        // GET: Employee/ResetPassword/5
+        public async Task<IActionResult> ResetPassword(string id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var employee = await _userManager.FindByIdAsync(id);
+            if (employee == null)
+            {
+                return NotFound();
+            }
+
+            var model = new ResetPasswordViewModel
+            {
+                Id = employee.Id,
+                UserName = employee.UserName
+            };
+
+            return View(model);
+        }
+
+        // POST: Employee/ResetPassword/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var employee = await _userManager.FindByIdAsync(model.Id);
+                if (employee == null)
+                {
+                    return NotFound();
+                }
+
+                // Remove the existing password
+                var removeResult = await _userManager.RemovePasswordAsync(employee);
+                if (!removeResult.Succeeded)
+                {
+                    foreach (var error in removeResult.Errors)
+                    {
+                        ModelState.AddModelError("", error.Description);
+                    }
+                    return View(model);
+                }
+
+                // Add the new password
+                var addResult = await _userManager.AddPasswordAsync(employee, model.NewPassword);
+                if (addResult.Succeeded)
+                {
+                    TempData["StatusMessage"] = "Password has been reset successfully.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                foreach (var error in addResult.Errors)
+                {
+                    ModelState.AddModelError("", error.Description);
+                }
+            }
+            return View(model);
+        }
     }
 } 
