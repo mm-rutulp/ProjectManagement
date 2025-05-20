@@ -41,7 +41,7 @@ namespace ProjectManagement.Controllers
             {
                 // Regular employees see only their assigned projects
                 var assignedProjects = await _context.ProjectAssignments
-                    .Where(pa => pa.UserId == currentUser.Id)
+                    .Where(pa => pa.UserId == currentUser.Id && pa.IsDeleted ==false)
                     .Include(pa => pa.Project)
                     .Select(pa => pa.Project)
                     .Distinct()
@@ -167,8 +167,11 @@ namespace ProjectManagement.Controllers
                 return NotFound();
             }
 
+            // Only fetch projects that are NOT soft-deleted
             var project = await _context.Projects
+                .Where(p => !p.IsDeleted)
                 .FirstOrDefaultAsync(m => m.Id == id);
+
             if (project == null)
             {
                 return NotFound();
@@ -176,7 +179,6 @@ namespace ProjectManagement.Controllers
 
             return View(project);
         }
-
         // POST: Project/Delete/5
         [Authorize(Roles = "Admin")]
         [HttpPost, ActionName("Delete")]
@@ -184,9 +186,11 @@ namespace ProjectManagement.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var project = await _context.Projects.FindAsync(id);
-            if (project != null)
+
+            if (project != null && !project.IsDeleted)
             {
-                _context.Projects.Remove(project);
+                project.IsDeleted = true;
+                _context.Projects.Update(project);
                 await _context.SaveChangesAsync();
             }
 
@@ -218,7 +222,7 @@ namespace ProjectManagement.Controllers
                     .AnyAsync(pa => pa.ProjectId == id && pa.UserId == currentUser.Id) ||
                     await _context.ProjectShadowResourceAssignments
                     .AnyAsync(psa => psa.ProjectId == id && psa.ShadowResourceId == currentUser.Id);
-                
+
                 if (!hasAccess)
                 {
                     return Forbid();
@@ -227,13 +231,13 @@ namespace ProjectManagement.Controllers
 
             // Get all employees
             var employees = await _userManager.GetUsersInRoleAsync("Employee");
-            
+
             // Get current regular assignments for this project
             var currentAssignments = await _context.ProjectAssignments
                 .Where(pa => pa.ProjectId == id)
                 .Include(pa => pa.User)
                 .ToListAsync();
-            
+
             // Get current shadow resource assignments for this project
             var currentShadowAssignments = await _context.ProjectShadowResourceAssignments
                 .Where(psa => psa.ProjectId == id)
@@ -242,12 +246,7 @@ namespace ProjectManagement.Controllers
                 .ToListAsync();
 
             // Filter assignments based on user role
-            if (userIsAdmin)
-            {
-                // Admin only sees regular assignments
-                currentShadowAssignments = new List<ProjectShadowResourceAssignment>();
-            }
-            else
+            if (!userIsAdmin)
             {
                 // Regular employees only see their own shadow resources
                 currentAssignments = new List<ProjectAssignment>();
@@ -256,13 +255,40 @@ namespace ProjectManagement.Controllers
                     .ToList();
             }
 
+            // Unified team list with shadow assignment owner info
+            var unifiedTeam = currentAssignments
+                .Select(a => new ProjectTeamMemberViewModel
+                {
+                    UserId = a.UserId,
+                    FullName = a.User.FullName,
+                    Role = a.Role,
+                    IsShadow = false,
+                    AddedByUserId = null
+                })
+                .ToList();
+
+            var shadowTeam = currentShadowAssignments
+                .Where(sa => !unifiedTeam.Any(ut => ut.UserId == sa.ShadowResourceId)) // Avoid duplicate if user is also regular
+                .Select(sa => new ProjectTeamMemberViewModel
+                {
+                    UserId = sa.ShadowResourceId,
+                    FullName = sa.ShadowResource.FullName,
+                    Role = "Shadow Resource",
+                    IsShadow = true,
+                    AddedByUserId = sa.ProjectOnBoardUserId,
+                    AddedByFullName = sa.ProjectOnBoardUser?.FullName
+                });
+
+            unifiedTeam.AddRange(shadowTeam);
+
             var viewModel = new ProjectAssignmentViewModel
             {
                 ProjectId = id.Value,
                 ProjectName = project.Name,
                 AvailableEmployees = employees.ToList(),
                 CurrentAssignments = currentAssignments,
-                CurrentShadowAssignments = currentShadowAssignments
+                CurrentShadowAssignments = currentShadowAssignments,
+                UnifiedTeamMembers = unifiedTeam
             };
 
             return View(viewModel);
@@ -299,7 +325,7 @@ namespace ProjectManagement.Controllers
 
             return RedirectToAction(nameof(Assign), new { id = model.ProjectId });
         }
-        
+
         // POST: Project/AssignShadowResource
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -313,7 +339,17 @@ namespace ProjectManagement.Controllers
 
             var currentUser = await _userManager.GetUserAsync(User);
 
-            // Check if the shadow resource is already assigned to this project
+            // Prevent assigning shadow role to someone already a regular developer
+            var isAlreadyRegularDeveloper = await _context.ProjectAssignments
+                .AnyAsync(pa => pa.ProjectId == model.ProjectId && pa.UserId == model.UserId);
+
+            if (isAlreadyRegularDeveloper)
+            {
+                TempData["Error"] = "This user is already assigned as a regular developer.";
+                return RedirectToAction(nameof(Assign), new { id = model.ProjectId });
+            }
+
+            //  Prevent duplicate shadow assignment
             var existingShadowAssignment = await _context.ProjectShadowResourceAssignments
                 .FirstOrDefaultAsync(psa => psa.ProjectId == model.ProjectId && psa.ShadowResourceId == model.UserId);
 
@@ -353,7 +389,37 @@ namespace ProjectManagement.Controllers
 
             return RedirectToAction(nameof(Assign), new { id = projectId });
         }
-        
+
+
+
+        //POST : Project/RemoceShadowResource 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> RemoveShadowResource(string shadowResourceId, int projectId)
+        {
+            var shadowAssignment = await _context.ProjectShadowResourceAssignments
+                .FirstOrDefaultAsync(sa => sa.ProjectId == projectId && sa.ShadowResourceId == shadowResourceId);
+
+            if (shadowAssignment == null)
+            {
+                return NotFound();
+            }
+
+            var currentUser = await _userManager.GetUserAsync(User);
+            var userIsAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
+
+            // Admins can remove any assignment, employees can only remove their own shadow resources
+            if (!userIsAdmin && shadowAssignment.ProjectOnBoardUserId != currentUser.Id)
+            {
+                return Forbid();
+            }
+
+            _context.ProjectShadowResourceAssignments.Remove(shadowAssignment);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Assign), new { id = projectId });
+        }
+
         // POST: Project/RemoveShadowAssignment/5
         [HttpPost]
         [ValidateAntiForgeryToken]

@@ -22,6 +22,7 @@ namespace ProjectManagement.Controllers
         }
 
         // GET: Worklog
+        // GET: Worklog
         public async Task<IActionResult> Index()
         {
             var currentUser = await _userManager.GetUserAsync(User);
@@ -31,13 +32,14 @@ namespace ProjectManagement.Controllers
             }
 
             var userWorklogs = await _context.Worklogs
-                .Where(w => w.UserId == currentUser.Id)
+                .Where(w => w.UserId == currentUser.Id && !w.IsDeleted)
                 .Include(w => w.Project)
                 .OrderByDescending(w => w.Date)
                 .ToListAsync();
 
             return View(userWorklogs);
         }
+
 
         // GET: Worklog/Project/5
         public async Task<IActionResult> Project(int? id, string? userId, DateTime? startDate, DateTime? endDate)
@@ -120,17 +122,10 @@ namespace ProjectManagement.Controllers
 
 
         [HttpGet]
-        public async Task<IActionResult> GetWorklogs(
-     int id,
-     string? userId,
-     DateTime? startDate,
-     DateTime? endDate,
-     int page = 1,
-     int pageSize = 10
-            )
+        public async Task<IActionResult> GetWorklogs(int id,string? userId,DateTime? startDate,DateTime? endDate,int page = 1,int pageSize = 10)
         {
             var query = _context.Worklogs
-                .Where(w => w.ProjectId == id)
+                .Where(w => w.ProjectId == id && !w.IsDeleted)
                 .Include(w => w.User)
                 .AsQueryable();
 
@@ -394,6 +389,7 @@ namespace ProjectManagement.Controllers
         }
 
         // GET: Worklog/Delete/5
+        [HttpGet]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -444,7 +440,8 @@ namespace ProjectManagement.Controllers
             }
 
             int projectId = worklog.ProjectId;
-            _context.Worklogs.Remove(worklog);
+            worklog.IsDeleted = true;
+            _context.Worklogs.Update(worklog);
             await _context.SaveChangesAsync();
             
             return RedirectToAction(nameof(Project), new { id = projectId });

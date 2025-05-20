@@ -17,6 +17,7 @@
 </div>
 
 <div class="row">
+    
     <!-- Left Side - Team Members Grid -->
     <div class="col-md-8">
         <div class="card">
@@ -34,48 +35,39 @@
                                 <th>Name</th>
                                 <th>Role</th>
                                 <th>Type</th>
+                                <th>Created By</th> 
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var assignment in Model.CurrentAssignments)
+                            @foreach (var member in Model.UnifiedTeamMembers)
                             {
+                                var isShadow = member.IsShadow;
                                 <tr>
-                                    <td>@assignment.User.FullName</td>
-                                    <td>@assignment.Role</td>
+                                    <td>@member.FullName</td>
+                                    <td>@member.Role</td>
                                     <td>
-                                        <!-- need to check here if it is assigned as -->
-                                        <span class="badge bg-primary">Regular</span>
+                                        <span class="badge @(isShadow ? "bg-info" : "bg-primary")">
+                                            @(isShadow ? "Shadow" : "Regular")
+                                        </span>
                                     </td>
                                     <td>
-                                        @if (isAdmin)
+                                        @if (isShadow)
                                         {
-                                            <form asp-action="RemoveTeamMember" method="post" class="d-inline">
-                                                <input type="hidden" name="projectId" value="@Model.ProjectId" />
-                                                <input type="hidden" name="userId" value="@assignment.UserId" />
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to remove this team member?')">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
+                                            @member.AddedByFullName
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Admin</span>
                                         }
                                     </td>
-                                </tr>
-                            }
-                            @foreach (var shadowAssignment in Model.CurrentShadowAssignments)
-                            {
-                                <tr>
-                                    <td>@shadowAssignment.ShadowResource.FullName</td>
-                                    <td>Shadow Resource</td>
                                     <td>
-                                        <span class="badge bg-info">Shadow</span>
-                                    </td>
-                                    <td>
-                                        @if (isAdmin || shadowAssignment.ProjectOnBoardUserId == currentUser.Id)
+                                        @if (isAdmin || (!isAdmin && isShadow && member.AddedByUserId == currentUser.Id))
                                         {
-                                            <form asp-action="RemoveShadowResource" method="post" class="d-inline">
+                                            <form asp-action="@(isShadow ? "RemoveShadowResource" : "RemoveTeamMember")" method="post" class="d-inline">
                                                 <input type="hidden" name="projectId" value="@Model.ProjectId" />
-                                                <input type="hidden" name="shadowResourceId" value="@shadowAssignment.ShadowResourceId" />
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to remove this shadow resource?')">
+                                                <input type="hidden" name="@(isShadow ? "shadowResourceId" : "userId")" value="@member.UserId" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to remove this team member?')">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </form>
@@ -99,7 +91,7 @@
                     <h5 class="mb-0">Add Team Member</h5>
                 </div>
                 <div class="card-body">
-                    <form asp-action="Assign" method="post">
+                    <form asp-action="AssignEmployee" method="post">
                         <input type="hidden" name="projectId" value="@Model.ProjectId" />
                         
                         <div class="mb-3">
@@ -139,12 +131,11 @@
                 </div>
                 <div class="card-body">
                     <form asp-action="AssignShadowResource" method="post">
-                        <input type="hidden" name="projectId" value="@Model.ProjectId" />
-                        <input type="hidden" name="projectOnBoardUserId" value="@currentUser.Id" />
-                        
+                        <input type="hidden" name="ProjectId" value="@Model.ProjectId" />
+
                         <div class="mb-3">
                             <label class="form-label">Shadow Resource</label>
-                            <select name="shadowResourceId" class="form-select" required>
+                            <select name="UserId" class="form-select" required>
                                 <option value="">Select Shadow Resource</option>
                                 @foreach (var employee in Model.AvailableEmployees)
                                 {
@@ -152,11 +143,22 @@
                                 }
                             </select>
                         </div>
-                        
+
+                        <div class="mb-3">
+                            <label class="form-label">Role</label>
+                            <select name="Role" class="form-select" required>
+                                <option value="">Select Role</option>
+                                <option value="Developer">Developer</option>
+                                <option value="Tester">Tester</option>
+                                <!-- Add more roles as needed -->
+                            </select>
+                        </div>
+
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="bi bi-plus-circle"></i> Add Shadow Resource
                         </button>
                     </form>
+
                 </div>
             </div>
         }
