@@ -21,7 +21,7 @@
         <h5 class="mb-0">Filter Worklogs</h5>
     </div>
     <div class="card-body">
-        <form method="get" class="row g-3">
+        <form  class="row g-3" id="filterForm">
             <input type="hidden" name="id" value="@Model.ProjectId" />
             
             <div class="col-md-4">
@@ -54,6 +54,7 @@
     </div>
 </div>
 
+
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Worklog Entries</h5>
@@ -74,35 +75,100 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @foreach (var worklog in Model.Worklogs)
-                    {
-                        <tr>
-                            <td>@worklog.Date.ToString("MMM dd, yyyy")</td>
-                            <td>@worklog.User.FullName</td>
-                            <td>@worklog.HoursWorked</td>
-                            <td>@worklog.TaskType</td>
-                            <td>@worklog.Description</td>
-                            <td>
-                                <div class="btn-group">
-                                    <a asp-action="Edit" asp-route-id="@worklog.Id" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <a asp-action="Delete" asp-route-id="@worklog.Id" class="btn btn-sm btn-outline-danger">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                    }
+                <tbody id="worklogTableBody">
+                    <!-- Worklogs will be loaded here via AJAX -->
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+<div id="pagination" class="mt-3 text-center"></div>
 
 @section Scripts {
     <script>
-        // Add any JavaScript for date picker initialization or other functionality here
+        // Define loadWorklogs in the global scope so it's accessible from anywhere
+               let currentPage = 1;
+        const pageSize = 10;
+          var projectId = @Model.ProjectId;
+        function loadWorklogs(page = 1) {
+            currentPage = page;
+
+            $.ajax({
+                url: '/Worklog/GetWorklogs',
+                method: 'GET',
+                data: {
+                    id: projectId,
+                    userId: $('select[name="userId"]').val(),
+                    startDate: $('input[name="startDate"]').val(),
+                    endDate: $('input[name="endDate"]').val(),
+                    page: page,
+                    pageSize: pageSize
+                },
+                success: function (response) {
+                    const data = response.data;
+                    const tbody = $('#worklogTableBody');
+                    tbody.empty();
+
+                    if (data.length === 0) {
+                        tbody.append('<tr><td colspan="6" class="text-center">No worklogs found.</td></tr>');
+                    }
+
+                    data.forEach(function (log) {
+                        const row = `
+                            <tr>
+                                <td>${new Date(log.date).toLocaleDateString('en-US')}</td>
+                                <td>${log.userFullName}</td>
+                                <td>${log.hoursWorked}</td>
+                                <td>${log.taskType}</td>
+                                <td>${log.description}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="/Worklog/Edit/${log.id}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="/Worklog/Delete/${log.id}" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>`;
+                        tbody.append(row);
+                    });
+
+                    renderPagination(response.totalCount, page, pageSize);
+                },
+                error: function () {
+                    $('#worklogTableBody').html('<tr><td colspan="6" class="text-danger text-center">Failed to load data.</td></tr>');
+                }
+            });
+        }
+
+        function renderPagination(totalCount, currentPage, pageSize) {
+            const totalPages = Math.ceil(totalCount / pageSize);
+            const container = $('#pagination');
+            container.empty();
+
+            for (let i = 1; i <= totalPages; i++) {
+                const button = $(`<button class="btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-outline-primary'} mx-1">${i}</button>`);
+                button.click(() => loadWorklogs(i));
+                container.append(button);
+            }
+        }
+
+        $('#filterForm').on('submit', function (e) {
+            e.preventDefault();
+            loadWorklogs(1); // reset to page 1 on filter
+        });
+
+        $(document).ready(function () {
+            loadWorklogs(); // Initial load on page load
+
+            // Hook the filter form submit event
+            $('#filterForm').on('submit', function (e) {
+                e.preventDefault();
+                loadWorklogs(); // Call the globally defined function
+            });
+        });
     </script>
-} 
+}
+
