@@ -6,6 +6,8 @@ namespace ProjectManagement.Models
     public class Project
     {
         public int Id { get; set; }
+        public bool IsDeleted { get; set; } = false;
+
 
         [Required]
         [StringLength(100)]

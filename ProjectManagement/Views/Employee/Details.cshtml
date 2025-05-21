@@ -29,6 +29,7 @@
                     <div class="btn-group">
                         <a asp-action="Index" class="btn btn-secondary">Back to List</a>
                         <a asp-action="Edit" asp-route-id="@Model.Employee.Id" class="btn btn-warning">Edit</a>
+                        <a asp-action="ResetPassword" asp-route-id="@Model.Employee.Id" class="btn btn-info">Reset Password</a>
                         <a asp-action="Delete" asp-route-id="@Model.Employee.Id" class="btn btn-danger">Delete</a>
                     </div>
                 </div>

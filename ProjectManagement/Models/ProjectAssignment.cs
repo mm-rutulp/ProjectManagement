@@ -7,6 +7,7 @@ namespace ProjectManagement.Models
     {
         public int Id { get; set; }
 
+        public bool IsDeleted { get; set; } = false;
         public int ProjectId { get; set; }
         [ForeignKey("ProjectId")]
         public virtual Project? Project { get; set; }

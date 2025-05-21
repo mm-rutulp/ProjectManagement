@@ -22,6 +22,9 @@ namespace ProjectManagement.ViewModels
         public ICollection<ApplicationUser> AvailableEmployees { get; set; } = new List<ApplicationUser>();
         public ICollection<ProjectAssignment> CurrentAssignments { get; set; } = new List<ProjectAssignment>();
         public ICollection<ProjectShadowResourceAssignment> CurrentShadowAssignments { get; set; } = new List<ProjectShadowResourceAssignment>();
+
+        public List<ProjectTeamMemberViewModel> UnifiedTeamMembers { get; set; } = new();
+
     }
 
     public class ProjectWorklogViewModel
@@ -85,4 +88,17 @@ namespace ProjectManagement.ViewModels
         
         public ICollection<MonthlySummary> ExistingSummaries { get; set; } = new List<MonthlySummary>();
     }
-} 
+
+    public class ProjectTeamMemberViewModel
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public bool IsShadow { get; set; }
+        public string? AddedByUserId { get; set; }
+
+        public string? AddedByFullName { get; set; }
+    }
+
+
+}

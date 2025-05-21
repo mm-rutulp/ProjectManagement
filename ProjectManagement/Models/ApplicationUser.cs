@@ -15,6 +15,9 @@ namespace ProjectManagement.Models
         [StringLength(50)]
         public string? Position { get; set; }
 
+        public bool IsDeleted { get; set; } = false;
+
+
         // Navigation properties
         public virtual ICollection<ProjectAssignment> ProjectAssignments { get; set; } = new List<ProjectAssignment>();
         
