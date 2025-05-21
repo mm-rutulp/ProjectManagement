@@ -8,6 +8,9 @@ namespace ProjectManagement.Models
         public int Id { get; set; }
 
         public int ProjectId { get; set; }
+        public bool IsDeleted { get; set; } = false;
+
+
         [ForeignKey("ProjectId")]
         public virtual Project? Project { get; set; }
 

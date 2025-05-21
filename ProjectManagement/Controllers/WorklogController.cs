@@ -22,6 +22,7 @@ namespace ProjectManagement.Controllers
         }
 
         // GET: Worklog
+        // GET: Worklog
         public async Task<IActionResult> Index()
         {
             var currentUser = await _userManager.GetUserAsync(User);
@@ -31,13 +32,14 @@ namespace ProjectManagement.Controllers
             }
 
             var userWorklogs = await _context.Worklogs
-                .Where(w => w.UserId == currentUser.Id)
+                .Where(w => w.UserId == currentUser.Id && !w.IsDeleted)
                 .Include(w => w.Project)
                 .OrderByDescending(w => w.Date)
                 .ToListAsync();
 
             return View(userWorklogs);
         }
+
 
         // GET: Worklog/Project/5
         public async Task<IActionResult> Project(int? id, string? userId, DateTime? startDate, DateTime? endDate)
@@ -116,6 +118,86 @@ namespace ProjectManagement.Controllers
             };
 
             return View(viewModel);
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> GetWorklogs(int id,string? userId,DateTime? startDate,DateTime? endDate,int page = 1,int pageSize = 10)
+        {
+            var query = _context.Worklogs
+                .Where(w => w.ProjectId == id && !w.IsDeleted)
+                .Include(w => w.User)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(userId))
+                query = query.Where(w => w.UserId == userId);
+
+            if (startDate.HasValue)
+                query = query.Where(w => w.Date >= startDate.Value);
+
+            if (endDate.HasValue)
+                query = query.Where(w => w.Date <= endDate.Value);
+
+            var totalCount = await query.CountAsync();
+
+            var worklogs = await query
+                .OrderByDescending(w => w.Date)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(w => new
+                {
+                    id = w.Id,
+                    date = w.Date,
+                    userFullName = w.User.FullName,
+                    hoursWorked = w.HoursWorked,
+                    taskType = w.TaskType,
+                    description = w.Description
+                })
+                .ToListAsync();
+
+            return Json(new
+            {
+                data = worklogs,
+                totalCount,
+                page,
+                pageSize
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetProjectWorklogs(int projectId)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            var isAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
+
+            if (!isAdmin)
+            {
+                var hasAccess = await _context.ProjectAssignments
+                    .AnyAsync(pa => pa.ProjectId == projectId && pa.UserId == currentUser.Id) ||
+                    await _context.ProjectShadowResourceAssignments
+                    .AnyAsync(psa => psa.ProjectId == projectId && psa.ShadowResourceId == currentUser.Id);
+
+                if (!hasAccess)
+                {
+                    return Forbid();
+                }
+            }
+
+            var worklogs = await _context.Worklogs
+                .Where(w => w.ProjectId == projectId)
+                .Include(w => w.User)
+                .OrderByDescending(w => w.Date)
+                .Select(w => new {
+                    w.Id,
+                    Date = w.Date.ToString("yyyy-MM-dd"),
+                    User = w.User.FullName,
+                    w.HoursWorked,
+                    w.TaskType,
+                    w.Description
+                })
+                .ToListAsync();
+
+            return Json(worklogs);
         }
 
         // GET: Worklog/Create/5
@@ -307,6 +389,7 @@ namespace ProjectManagement.Controllers
         }
 
         // GET: Worklog/Delete/5
+        [HttpGet]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -357,7 +440,8 @@ namespace ProjectManagement.Controllers
             }
 
             int projectId = worklog.ProjectId;
-            _context.Worklogs.Remove(worklog);
+            worklog.IsDeleted = true;
+            _context.Worklogs.Update(worklog);
             await _context.SaveChangesAsync();
             
             return RedirectToAction(nameof(Project), new { id = projectId });
