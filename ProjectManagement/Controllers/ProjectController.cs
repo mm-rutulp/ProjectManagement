@@ -33,8 +33,11 @@ namespace ProjectManagement.Controllers
 
             if (userIsAdmin)
             {
-                // Admins can see all projects
-                var allProjects = await _context.Projects.ToListAsync();
+                // Admins can see all projects that are not marked as deleted
+                var allProjects = await _context.Projects
+                    .Where(p => !p.IsDeleted)
+                    .ToListAsync();
+
                 return View(allProjects);
             }
             else

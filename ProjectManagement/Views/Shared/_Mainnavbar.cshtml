@@ -1,0 +1,17 @@
+﻿@using Microsoft.AspNetCore.Identity
+@inject UserManager<ProjectManagement.Models.ApplicationUser> UserManager
+@inject SignInManager<ProjectManagement.Models.ApplicationUser> SignInManager
+
+@{
+    var user = await UserManager.GetUserAsync(User);
+    var isAdmin = user != null && await UserManager.IsInRoleAsync(user, "Admin");
+}
+
+@if (isAdmin)
+{
+    <li class="nav-item">
+        <a class="nav-link" asp-controller="Employee" asp-action="Index">
+            <i class="bi bi bi-person"></i> Employee
+        </a>
+    </li>
+}

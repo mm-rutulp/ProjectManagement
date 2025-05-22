@@ -1,7 +1,7 @@
 @model ProjectManagement.ViewModels.WorklogCreateViewModel
 
 @{
-    ViewData["Title"] = "Add Worklog";
+    ViewData["Title"] = Model.WorklogId > 0 ? "Edit Worklog" : "Add Worklog";
 }
 
 <div class="container">
