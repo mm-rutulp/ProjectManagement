@@ -43,6 +43,7 @@ namespace ProjectManagement.ViewModels
 
     public class WorklogCreateViewModel
     {
+        public int? WorklogId { get; set; }
         public int ProjectId { get; set; }
         public string ProjectName { get; set; } = string.Empty;
 

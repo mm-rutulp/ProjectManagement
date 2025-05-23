@@ -1,3 +1,4 @@
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -121,8 +122,9 @@ namespace ProjectManagement.Controllers
         }
 
 
+        
         [HttpGet]
-        public async Task<IActionResult> GetWorklogs(int id,string? userId,DateTime? startDate,DateTime? endDate,int page = 1,int pageSize = 10)
+        public async Task<IActionResult> GetWorklogs(int id, string? userId, DateTime? startDate, DateTime? endDate, int page = 1, int pageSize = 10)
         {
             var query = _context.Worklogs
                 .Where(w => w.ProjectId == id && !w.IsDeleted)
@@ -138,30 +140,112 @@ namespace ProjectManagement.Controllers
             if (endDate.HasValue)
                 query = query.Where(w => w.Date <= endDate.Value);
 
-            var totalCount = await query.CountAsync();
+            var groupedData = await query
+                .GroupBy(w => new { w.User.FullName, w.Date })
+                .Select(g => new
+                {
+                    date = g.Key.Date,
+                    userFullName = g.Key.FullName,
+                    totalHours = g.Sum(x => x.HoursWorked)
 
-            var worklogs = await query
-                .OrderByDescending(w => w.Date)
+                })
+                .OrderByDescending(g => g.date)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(w => new
-                {
-                    id = w.Id,
-                    date = w.Date,
-                    userFullName = w.User.FullName,
-                    hoursWorked = w.HoursWorked,
-                    taskType = w.TaskType,
-                    description = w.Description
-                })
                 .ToListAsync();
+
+            var totalCount = await query
+                .GroupBy(w => new { w.User.FullName, w.Date })
+                .CountAsync();
 
             return Json(new
             {
-                data = worklogs,
+                data = groupedData,
                 totalCount,
                 page,
                 pageSize
             });
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadWorklogsExcel(int id, string? userId, DateTime? startDate, DateTime? endDate)
+        {
+            return await GenerateWorklogsExcelAsync(id, userId, startDate, endDate);
+        }
+        //function to download excel report 
+        private async Task<FileResult> GenerateWorklogsExcelAsync(int id, string? userId, DateTime? startDate, DateTime? endDate)
+        {
+            var query = _context.Worklogs
+                .Where(w => w.ProjectId == id && !w.IsDeleted)
+                .Include(w => w.User)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(userId))
+                query = query.Where(w => w.UserId == userId);
+
+            if (startDate.HasValue)
+                query = query.Where(w => w.Date >= startDate.Value);
+
+            if (endDate.HasValue)
+                query = query.Where(w => w.Date <= endDate.Value);
+
+            var worklogs = await query.OrderByDescending(w => w.Date).ToListAsync();
+
+            using var workbook = new ClosedXML.Excel.XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Worklogs");
+
+            // Header
+            var headerRow = worksheet.Range("A1:E1");
+            worksheet.Cell(1, 1).Value = "Date";
+            worksheet.Cell(1, 2).Value = "User";
+            worksheet.Cell(1, 3).Value = "Hours Worked";
+            worksheet.Cell(1, 4).Value = "Task Type";
+            worksheet.Cell(1, 5).Value = "Description";
+
+            headerRow.Style.Font.Bold = true;
+            headerRow.Style.Fill.BackgroundColor = XLColor.LightGreen;
+            int row = 2;
+            foreach (var w in worklogs)
+            {
+                worksheet.Cell(row, 1).Value = w.Date.ToString("yyyy-MM-dd");
+                worksheet.Cell(row, 2).Value = w.User.FullName;
+                worksheet.Cell(row, 3).Value = w.HoursWorked;
+                worksheet.Cell(row, 4).Value = w.TaskType;
+                worksheet.Cell(row, 5).Value = w.Description;
+                row++;
+            }
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var fileName = $"Worklogs_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetWorklogDetails(int projectId, string userName, DateTime date)
+        {
+            var logs = await _context.Worklogs
+                .Where(w => w.ProjectId == projectId &&
+                            !w.IsDeleted &&
+                            w.User.FullName == userName &&
+                            w.Date == date)
+                .Include(w => w.User)
+                .Select(w => new
+                {
+                    worklogId = w.Id,
+                    date = w.Date,
+                    userFullName = w.User.FullName,
+                    hoursWorked = w.HoursWorked,
+                    taskType = w.TaskType,
+                    description = w.Description,
+                   
+                })
+                .ToListAsync();
+
+            return Json(logs);
         }
 
         [HttpGet]
@@ -199,7 +283,7 @@ namespace ProjectManagement.Controllers
 
             return Json(worklogs);
         }
-
+       
         // GET: Worklog/Create/5
         public async Task<IActionResult> Create(int? id)
         {
@@ -244,10 +328,7 @@ namespace ProjectManagement.Controllers
             // If the user is a shadow resource for this project, populate the dropdown with users who added them
             if (shadowResourceAssignments.Any())
             {
-                viewModel.AvailableUsers = shadowResourceAssignments
-                    .Select(psa => psa.ProjectOnBoardUser)
-                    .Distinct()
-                    .ToList();
+                viewModel.AvailableUsers = shadowResourceAssignments.Select(psa => psa.ProjectOnBoardUser).Distinct().ToList();
             }
             else
             {
@@ -337,18 +418,29 @@ namespace ProjectManagement.Controllers
             {
                 return Forbid();
             }
+            var shadowResourceAssignments = await _context.ProjectShadowResourceAssignments
+                .Where(psa => psa.ProjectId == worklog.ProjectId && psa.ShadowResourceId == currentUser.Id)
+                .Include(psa => psa.ProjectOnBoardUser)
+                .ToListAsync();
+
+            var availableUsers = shadowResourceAssignments.Any()
+                ? shadowResourceAssignments.Select(psa => psa.ProjectOnBoardUser).Distinct().ToList()
+                : new List<ApplicationUser> { currentUser };
 
             var viewModel = new WorklogCreateViewModel
             {
+                WorklogId =worklog.Id,
+                
                 ProjectId = worklog.ProjectId,
                 ProjectName = worklog.Project.Name,
                 Date = worklog.Date,
                 HoursWorked = worklog.HoursWorked,
                 Description = worklog.Description,
-                TaskType = worklog.TaskType
+                TaskType = worklog.TaskType,
+                AvailableUsers = availableUsers
             };
 
-            return View(viewModel);
+            return View("Create",viewModel);
         }
 
         // POST: Worklog/Edit/5

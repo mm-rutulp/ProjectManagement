@@ -7,6 +7,11 @@
     ViewData["Title"] = "Project Worklogs";
     var currentUser = await UserManager.GetUserAsync(User);
     var isAdmin = User.IsInRole("Admin");
+
+    
+    <div id="antiForgeryTokenHolder" style="display:none;">
+        @Html.AntiForgeryToken()
+    </div>
 }
 
 <div class="page-header d-flex justify-content-between align-items-center">
@@ -16,80 +21,223 @@
     </a>
 </div>
 
+<!-- Filter Form -->
 <div class="card mb-4">
-    <div class="card-header">
+    <div class="card-header  text-white">
         <h5 class="mb-0">Filter Worklogs</h5>
     </div>
     <div class="card-body">
-        <form  class="row g-3" id="filterForm">
+        <form class="row align-items-end" id="filterForm" method="get" action="@Url.Action("YourFilterAction", "Worklog")">
             <input type="hidden" name="id" value="@Model.ProjectId" />
-            
-            <div class="col-md-4">
+
+            <!-- Fields Section -->
+            <div class="col-md-2">
                 <label class="form-label">Team Member</label>
                 <select name="userId" class="form-select">
-                    <option value="">All Team Members</option>
+                    <option value="">Team Members</option>
                     @foreach (var member in Model.ProjectMembers)
                     {
-                        <option value="@member.Id" selected="@(Model.UserId == member.Id)">@member.FullName</option>
+                        <option value="@member.Id" selected="@(Model.UserId == member.Id)">
+                            @member.FullName
+                        </option>
                     }
                 </select>
             </div>
-            
-            <div class="col-md-3">
+
+            <div class="col-md-2">
                 <label class="form-label">Start Date</label>
                 <input type="date" name="startDate" class="form-control" value="@(Model.StartDate?.ToString("yyyy-MM-dd"))" />
             </div>
-            
-            <div class="col-md-3">
+
+            <div class="col-md-2">
                 <label class="form-label">End Date</label>
                 <input type="date" name="endDate" class="form-control" value="@(Model.EndDate?.ToString("yyyy-MM-dd"))" />
             </div>
-            
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">
+
+            <!-- Buttons Section aligned right -->
+            <div class="col-md-6 d-flex justify-content-end gap-2">
+                <button type="submit" class="btn btn-primary">
                     <i class="bi bi-search"></i> Filter
                 </button>
+                <form method="get" action="@Url.Action("DownloadWorklogsExcel", "Worklog")" id="downloadForm">
+                    <input type="hidden" name="id" value="@Model.ProjectId" />
+                    <input type="hidden" name="userId" />
+                    <input type="hidden" name="startDate" />
+                    <input type="hidden" name="endDate" />
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-filetype-xls"></i> Export Excel
+                    </button>
+                </form>
             </div>
         </form>
     </div>
 </div>
 
 
+
+<!-- Worklogs Table -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Worklog Entries</h5>
-        <a asp-action="Create" asp-route-id="@Model.ProjectId" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Add Worklog
-        </a>
+        @if (!isAdmin)
+        {
+            <a asp-action="Create" asp-route-id="@Model.ProjectId" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Worklog
+            </a>
+        }
     </div>
     <div class="card-body">
         <div class="table-responsive">
             <table class="table">
                 <thead>
                     <tr>
+                        <th style="width: 40px;"></th> <!-- New arrow column -->
                         <th>Date</th>
                         <th>Team Member</th>
                         <th>Hours</th>
-                        <th>Task Type</th>
-                        <th>Description</th>
-                        <th>Actions</th>
+                       
                     </tr>
                 </thead>
                 <tbody id="worklogTableBody">
                     <!-- Worklogs will be loaded here via AJAX -->
                 </tbody>
             </table>
+
         </div>
     </div>
 </div>
+
 <div id="pagination" class="mt-3 text-center"></div>
 
+<!-- JavaScript -->
 @section Scripts {
     <script>
-        // Define loadWorklogs in the global scope so it's accessible from anywhere
-               let currentPage = 1;
+        const isAdmin = @(isAdmin.ToString().ToLower());
+        const antiForgeryToken = $('#antiForgeryTokenHolder input[name="__RequestVerificationToken"]').val();
+
+        const projectId = @Model.ProjectId;
+        let currentPage = 1;
         const pageSize = 10;
-          var projectId = @Model.ProjectId;
+
+   
+
+        function renderPagination(totalCount, currentPage, pageSize) {
+            const totalPages = Math.ceil(totalCount / pageSize);
+            const container = $('#pagination');
+            container.empty();
+
+            for (let i = 1; i <= totalPages; i++) {
+                const button = $(`<button class="btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-outline-primary'} mx-1">${i}</button>`);
+                button.click(() => loadWorklogs(i));
+                container.append(button);
+            }
+        }
+            document.addEventListener("DOMContentLoaded", function () {
+            const filterForm = document.getElementById("filterForm");
+            const downloadForm = document.getElementById("downloadForm");
+
+            // Sync filter values to download form before submit
+            downloadForm.addEventListener("submit", function () {
+                // Copy values from filter form
+                const userId = filterForm.querySelector('select[name="userId"]').value;
+                const startDate = filterForm.querySelector('input[name="startDate"]').value;
+                const endDate = filterForm.querySelector('input[name="endDate"]').value;
+
+                // Set them into download form inputs
+                downloadForm.querySelector('input[name="userId"]').value = userId;
+                downloadForm.querySelector('input[name="startDate"]').value = startDate;
+                downloadForm.querySelector('input[name="endDate"]').value = endDate;
+            });
+        });
+         
+        function toggleDetails(rowId, userName, date) {
+            const row = $(`#${rowId}`);
+            const body = row.find('.detail-body');
+
+            if (row.is(':visible')) {
+                row.hide();
+            } else {
+                row.show();
+                if (body.children().length === 1 && body.text().includes('Loading')) {
+                    $.ajax({
+                        url: '/Worklog/GetWorklogDetails',
+                        method: 'GET',
+                        data: {
+                            projectId: projectId,
+                            userName: userName,
+                            date: date
+                        },
+                        success: function (details) {
+                            body.empty();
+                            if (details.length === 0) {
+                                body.append('<tr><td colspan="3" class="text-center text-muted">No details found.</td></tr>');
+                            } else {
+                                        details.forEach(log => {
+                                        body.append(`
+                                            <tr>
+                                               <td>${formatDateToDDMMYYYY(log.date)}</td>
+                                                <td>${log.userFullName}</td>
+                                                <td>${log.hoursWorked}</td>
+                                                <td>${log.taskType}</td>
+                                                <td>${log.description}</td>
+                                                       ${!isAdmin ? `
+                                                            <td>
+                                                                <a href="/Worklog/Edit/${log.worklogId}" class="btn btn-sm btn-outline-primary me-1">
+                                                                    <i class="bi bi-pencil"></i>
+                                                                </a>
+                                                                <form action="/Worklog/Delete/${log.worklogId}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this worklog?');">
+                                                                    <input name="__RequestVerificationToken" type="hidden" value="${antiForgeryToken}" />
+                                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                        <i class="bi bi-trash"></i>
+                                                                    </button>
+                                                                </form>
+                                                            </td>
+                                                        ` : '<td></td>'}
+                                            </tr>
+                                        `);
+                                    });
+                            }
+                        },
+                        error: function () {
+                            body.html('<tr><td colspan="3" class="text-danger text-center">Failed to load details.</td></tr>');
+                        }
+                    });
+                }
+            }
+        }
+
+
+         function formatDateToDDMMYYYY(dateString) {
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+            
+        
+        
+        document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.toggle-arrow').forEach(function(td) {
+                td.addEventListener('click', function() {
+                    const currentRow = td.parentElement;
+                    const nextRow = currentRow.nextElementSibling;
+                    if (!nextRow || !nextRow.classList.contains('detail-row')) return;
+
+                    if (nextRow.style.display === 'none' || nextRow.style.display === '') {
+                        nextRow.style.display = 'table-row';
+                        td.querySelector('i').classList.remove('bi-chevron-down');
+                        td.querySelector('i').classList.add('bi-chevron-up');
+                    } else {
+                        nextRow.style.display = 'none';
+                        td.querySelector('i').classList.remove('bi-chevron-up');
+                        td.querySelector('i').classList.add('bi-chevron-down');
+                    }
+                });
+            });
+        });
+
+
         function loadWorklogs(page = 1) {
             currentPage = page;
 
@@ -106,77 +254,79 @@
                 },
                 success: function (response) {
                     const data = response.data;
+                    debugger;
                     const tbody = $('#worklogTableBody');
                     tbody.empty();
 
                     if (data.length === 0) {
-                        tbody.append('<tr><td colspan="6" class="text-center">No worklogs found.</td></tr>');
+                        // Adjust colspan: arrow column + 3 columns + (Actions column if !isAdmin)
+                        const colspan = isAdmin ? 4 : 5;
+                        tbody.append(`<tr><td colspan="${colspan}" class="text-center">No worklogs found.</td></tr>`);
+                        return;
                     }
+                    data.forEach(function (log, index) {
+                        const rowId = `row-${index}`;
+                        const toggleId = `toggle-${index}`;
+                        const formattedDate = formatDateToDDMMYYYY(log.date);
+                        debugger;
+                        // Calculate colspan for detail row
+                        const colspan = isAdmin ? 4 : 5;
 
-                    data.forEach(function (log) {
                         const row = `
-                            <tr>
-                                <td>${new Date(log.date).toLocaleDateString('en-US')}</td>
+                            <tr data-index="${index}" id="${rowId}">
+                                <td style="width: 40px; text-align: center; cursor: pointer;">
+                                    <button class="btn btn-sm btn-link p-0" onclick="toggleDetails('${toggleId}', '${log.userFullName}', '${log.date}')">
+                                        <i class="bi bi-chevron-down"></i>
+                                    </button>
+                                </td>
+                                <td>${formattedDate}</td>
                                 <td>${log.userFullName}</td>
-                                <td>${log.hoursWorked}</td>
-                                <td>${log.taskType}</td>
-                                <td>${log.description}</td>
-                                <td>
-                                    <div class="btn-group">
-                                    <form method="post" action="/Worklog/Edit/${log.id}" style="display:inline;">
-                                                    @Html.AntiForgeryToken()
-                                                    <button type="submit" class="btn btn-sm btn-outline-primary">
-                                                         <i class="bi bi-pencil"></i>
-                                                    </button>
-                                      </form>
-                                        
-                                     <form method="post" action="/Worklog/Delete/${log.id}" style="display:inline;">
-                                                    @Html.AntiForgeryToken()
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                      </form>
-                                       
+                                <td>${log.totalHours}</td>
+                                ${!isAdmin ? '<td></td>' : ''}
+                            </tr>
+                            <tr id="${toggleId}" class="detail-row" style="display: none;">
+                                <td colspan="${colspan}">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-sm mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>DATE</th>
+                                                    <th>TEAM MEMBER</th>
+                                                    <th>Hours</th>
+                                                    <th>Task Type</th>
+                                                    <th>Description</th>
+                                                    @if(!isAdmin)
+                                                    {
+                                                     <th>Actions</th>
+                                                    }
+                                                </tr>
+                                            </thead>
+                                            <tbody class="detail-body">
+                                                <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </td>
                             </tr>`;
+
                         tbody.append(row);
                     });
 
                     renderPagination(response.totalCount, page, pageSize);
                 },
                 error: function () {
-                    $('#worklogTableBody').html('<tr><td colspan="6" class="text-danger text-center">Failed to load data.</td></tr>');
+                    const colspan = isAdmin ? 4 : 5;
+                    $('#worklogTableBody').html(`<tr><td colspan="${colspan}" class="text-danger text-center">Failed to load data.</td></tr>`);
                 }
             });
         }
 
-        function renderPagination(totalCount, currentPage, pageSize) {
-            const totalPages = Math.ceil(totalCount / pageSize);
-            const container = $('#pagination');
-            container.empty();
-
-            for (let i = 1; i <= totalPages; i++) {
-                const button = $(`<button class="btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-outline-primary'} mx-1">${i}</button>`);
-                button.click(() => loadWorklogs(i));
-                container.append(button);
-            }
-        }
-
-        $('#filterForm').on('submit', function (e) {
-            e.preventDefault();
-            loadWorklogs(1); // reset to page 1 on filter
-        });
-
         $(document).ready(function () {
-            loadWorklogs(); // Initial load on page load
-
-            // Hook the filter form submit event
+            loadWorklogs();
             $('#filterForm').on('submit', function (e) {
                 e.preventDefault();
-                loadWorklogs(); // Call the globally defined function
+                loadWorklogs(1);
             });
         });
     </script>
 }
-
