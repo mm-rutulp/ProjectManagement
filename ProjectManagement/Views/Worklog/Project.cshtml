@@ -21,58 +21,64 @@
     </a>
 </div>
 
-<!-- Filter Form -->
 <div class="card mb-4">
-    <div class="card-header  text-white">
+    <div class="card-header text-white">
         <h5 class="mb-0">Filter Worklogs</h5>
     </div>
     <div class="card-body">
-        <form class="row align-items-end" id="filterForm" method="get" action="@Url.Action("YourFilterAction", "Worklog")">
-            <input type="hidden" name="id" value="@Model.ProjectId" />
+        <div class="row align-items-end">
+            <!-- Filter Form (Left side) -->
+            <form class="row col-md-10 g-3" id="filterForm" method="get" action="@Url.Action("YourFilterAction", "Worklog")">
+                <input type="hidden" name="id" value="@Model.ProjectId" />
 
-            <!-- Fields Section -->
-            <div class="col-md-2">
-                <label class="form-label">Team Member</label>
-                <select name="userId" class="form-select">
-                    <option value="">Team Members</option>
-                    @foreach (var member in Model.ProjectMembers)
-                    {
-                        <option value="@member.Id" selected="@(Model.UserId == member.Id)">
-                            @member.FullName
-                        </option>
-                    }
-                </select>
-            </div>
+                <div class="col-md-3">
+                    <label class="form-label">Team Member</label>
+                    <select name="userId" class="form-select">
+                        <option value="">Team Members</option>
+                        @foreach (var member in Model.ProjectMembers)
+                        {
+                            <option value="@member.Id" selected="@(Model.UserId == member.Id)">
+                                @member.FullName
+                            </option>
+                        }
+                    </select>
+                </div>
 
-            <div class="col-md-2">
-                <label class="form-label">Start Date</label>
-                <input type="date" name="startDate" class="form-control" value="@(Model.StartDate?.ToString("yyyy-MM-dd"))" />
-            </div>
+                <div class="col-md-3">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="startDate" class="form-control" value="@(Model.StartDate?.ToString("yyyy-MM-dd"))" />
+                </div>
 
-            <div class="col-md-2">
-                <label class="form-label">End Date</label>
-                <input type="date" name="endDate" class="form-control" value="@(Model.EndDate?.ToString("yyyy-MM-dd"))" />
-            </div>
+                <div class="col-md-3">
+                    <label class="form-label">End Date</label>
+                    <input type="date" name="endDate" class="form-control" value="@(Model.EndDate?.ToString("yyyy-MM-dd"))" />
+                </div>
 
-            <!-- Buttons Section aligned right -->
-            <div class="col-md-6 d-flex justify-content-end gap-2">
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-search"></i> Filter
-                </button>
-                <form method="get" action="@Url.Action("DownloadWorklogsExcel", "Worklog")" id="downloadForm">
-                    <input type="hidden" name="id" value="@Model.ProjectId" />
-                    <input type="hidden" name="userId" />
-                    <input type="hidden" name="startDate" />
-                    <input type="hidden" name="endDate" />
-                    <button type="submit" class="btn btn-outline-primary">
-                        <i class="bi bi-filetype-xls"></i> Export Excel
+                <div class="col-md-3 d-flex gap-2 align-items-end">
+                    <button type="submit" class="btn btn-primary px-3 py-2">
+                        <i class="bi bi-filter fs-5"></i>
                     </button>
-                </form>
-            </div>
-        </form>
-    </div>
-</div>
+                    <button type="button" class="btn btn-light border px-3 py-2" style="background-color: #f5f5f5;" onclick="clearFilterForm()">
+                        <i class="bi bi-x-circle fs-5 text-danger"></i>
+                    </button>
 
+                </div>
+            </form>
+
+            <!-- Export Form (Right side) -->
+            <form class="ms-auto mt-4" method="get" action="@Url.Action("DownloadWorklogsExcel", "Worklog")" id="downloadForm" style="max-width: 100px;">
+                <input type="hidden" name="id" value="@Model.ProjectId" />
+                <input type="hidden" name="userId" />
+                <input type="hidden" name="startDate" />
+                <input type="hidden" name="endDate" />
+                <button type="submit" class="btn btn-outline-primary px-2 py-2 w-100">
+                    <i class="bi bi-filetype-xls fs-5"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+</div>
 
 
 <!-- Worklogs Table -->
@@ -88,10 +94,10 @@
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table">
+            <table class="table w-100">
                 <thead>
                     <tr>
-                        <th style="width: 40px;"></th> <!-- New arrow column -->
+                        <th ></th> <!-- New arrow column -->
                         <th>Date</th>
                         <th>Team Member</th>
                         <th>Hours</th>
@@ -132,23 +138,23 @@
                 container.append(button);
             }
         }
-            document.addEventListener("DOMContentLoaded", function () {
+            
+        document.addEventListener("DOMContentLoaded", function () {
             const filterForm = document.getElementById("filterForm");
             const downloadForm = document.getElementById("downloadForm");
 
-            // Sync filter values to download form before submit
             downloadForm.addEventListener("submit", function () {
-                // Copy values from filter form
-                const userId = filterForm.querySelector('select[name="userId"]').value;
-                const startDate = filterForm.querySelector('input[name="startDate"]').value;
-                const endDate = filterForm.querySelector('input[name="endDate"]').value;
+                const userId = filterForm.querySelector('[name="userId"]').value;
+                const startDate = filterForm.querySelector('[name="startDate"]').value;
+                const endDate = filterForm.querySelector('[name="endDate"]').value;
 
-                // Set them into download form inputs
-                downloadForm.querySelector('input[name="userId"]').value = userId;
-                downloadForm.querySelector('input[name="startDate"]').value = startDate;
-                downloadForm.querySelector('input[name="endDate"]').value = endDate;
+                downloadForm.querySelector('[name="userId"]').value = userId;
+                downloadForm.querySelector('[name="startDate"]').value = startDate;
+                downloadForm.querySelector('[name="endDate"]').value = endDate;
             });
         });
+   
+
          
         function toggleDetails(rowId, userName, date) {
             const row = $(`#${rowId}`);
@@ -217,23 +223,18 @@
             
         
         
-        document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('.toggle-arrow').forEach(function(td) {
-                td.addEventListener('click', function() {
-                    const currentRow = td.parentElement;
-                    const nextRow = currentRow.nextElementSibling;
-                    if (!nextRow || !nextRow.classList.contains('detail-row')) return;
+            document.addEventListener("DOMContentLoaded", function () {
+            const filterForm = document.getElementById("filterForm");
+            const downloadForm = document.getElementById("downloadForm");
 
-                    if (nextRow.style.display === 'none' || nextRow.style.display === '') {
-                        nextRow.style.display = 'table-row';
-                        td.querySelector('i').classList.remove('bi-chevron-down');
-                        td.querySelector('i').classList.add('bi-chevron-up');
-                    } else {
-                        nextRow.style.display = 'none';
-                        td.querySelector('i').classList.remove('bi-chevron-up');
-                        td.querySelector('i').classList.add('bi-chevron-down');
-                    }
-                });
+            downloadForm.addEventListener("submit", function () {
+                const userId = filterForm.querySelector('[name="userId"]').value;
+                const startDate = filterForm.querySelector('[name="startDate"]').value;
+                const endDate = filterForm.querySelector('[name="endDate"]').value;
+
+                downloadForm.querySelector('[name="userId"]').value = userId;
+                downloadForm.querySelector('[name="startDate"]').value = startDate;
+                downloadForm.querySelector('[name="endDate"]').value = endDate;
             });
         });
 
@@ -254,7 +255,7 @@
                 },
                 success: function (response) {
                     const data = response.data;
-                    debugger;
+              
                     const tbody = $('#worklogTableBody');
                     tbody.empty();
 
@@ -268,7 +269,7 @@
                         const rowId = `row-${index}`;
                         const toggleId = `toggle-${index}`;
                         const formattedDate = formatDateToDDMMYYYY(log.date);
-                        debugger;
+                        
                         // Calculate colspan for detail row
                         const colspan = isAdmin ? 4 : 5;
 
@@ -319,6 +320,14 @@
                     $('#worklogTableBody').html(`<tr><td colspan="${colspan}" class="text-danger text-center">Failed to load data.</td></tr>`);
                 }
             });
+        }
+             function clearFilterForm() {
+            const form = document.getElementById('filterForm');
+            form.querySelector('select[name="userId"]').value = '';
+            form.querySelector('input[name="startDate"]').value = '';
+            form.querySelector('input[name="endDate"]').value = '';
+            loadWorklogs(1);
+
         }
 
         $(document).ready(function () {
