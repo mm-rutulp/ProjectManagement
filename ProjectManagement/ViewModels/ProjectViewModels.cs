@@ -26,6 +26,8 @@ namespace ProjectManagement.ViewModels
         public List<ProjectTeamMemberViewModel> UnifiedTeamMembers { get; set; } = new();
 
     }
+  
+
 
     public class ProjectWorklogViewModel
     {
@@ -100,6 +102,12 @@ namespace ProjectManagement.ViewModels
 
         public string? AddedByFullName { get; set; }
     }
+    public class ProjectDetailsViewModel
+    {
+        public Project Project { get; set; }
+        public List<ProjectTeamMemberViewModel> ShadowTeamMembers { get; set; } = new();
+    }
+
 
 
 }

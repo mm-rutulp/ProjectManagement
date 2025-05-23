@@ -3,6 +3,8 @@
 @using ProjectManagement.Models
 @inject UserManager<ApplicationUser> UserManager
 
+
+
 @{
     ViewData["Title"] = "Team Management";
     var currentUser = await UserManager.GetUserAsync(User);
@@ -19,11 +21,11 @@
 <div class="row">
     
     <!-- Left Side - Team Members Grid -->
+    <!-- Left Side - Team Members Grid -->
     <div class="col-md-8">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Current Team Members</h5>
-                
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -33,7 +35,7 @@
                                 <th>Name</th>
                                 <th>Role</th>
                                 <th>Type</th>
-                                <th>Created By</th> 
+                                <th>Created By</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -52,7 +54,7 @@
                                     <td>
                                         @if (isShadow)
                                         {
-                                            @member.AddedByFullName
+                                            @(!string.IsNullOrEmpty(member.AddedByFullName) ? member.AddedByFullName : "Unknown")
                                         }
                                         else
                                         {
@@ -79,6 +81,7 @@
             </div>
         </div>
     </div>
+
 
     <!-- Right Side - Forms -->
     <div class="col-md-4">

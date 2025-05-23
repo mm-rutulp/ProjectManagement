@@ -63,6 +63,7 @@ namespace ProjectManagement.Controllers
             }
 
             var project = await _context.Projects
+                .Where(p => !p.IsDeleted)
                 .FirstOrDefaultAsync(m => m.Id == id);
             
             if (project == null)
@@ -72,18 +73,22 @@ namespace ProjectManagement.Controllers
 
             var currentUser = await _userManager.GetUserAsync(User);
             var userIsAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
-            
+
             // Check access if not admin
             if (!userIsAdmin)
             {
-                var hasAccess = await _context.ProjectAssignments
+                var hasRegularAccess = await _context.ProjectAssignments
                     .AnyAsync(pa => pa.ProjectId == id && pa.UserId == currentUser.Id);
-                
-                if (!hasAccess)
+
+                var isShadowResource = await _context.ProjectShadowResourceAssignments
+                    .AnyAsync(psa => psa.ProjectId == id && psa.ShadowResourceId == currentUser.Id && !psa.IsDeleted);
+
+                if (!hasRegularAccess && !isShadowResource)
                 {
                     return Forbid();
                 }
             }
+
 
             return View(project);
         }
@@ -204,98 +209,112 @@ namespace ProjectManagement.Controllers
         [Authorize]
         public async Task<IActionResult> Assign(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var project = await _context.Projects.FindAsync(id);
-            if (project == null)
-            {
-                return NotFound();
-            }
+            if (project == null) return NotFound();
 
             var currentUser = await _userManager.GetUserAsync(User);
-            var userIsAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
+            var isAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
 
-            // Check access for non-admin users
-            if (!userIsAdmin)
+            var employees = new List<ApplicationUser>();
+            var currentAssignments = new List<ProjectAssignment>();
+            var currentShadowAssignments = new List<ProjectShadowResourceAssignment>();
+            var unifiedTeam = new List<ProjectTeamMemberViewModel>();
+
+            if (isAdmin)
+            {
+                employees = (await _userManager.GetUsersInRoleAsync("Employee")).ToList();
+                currentAssignments = await _context.ProjectAssignments
+                    .Where(pa => pa.ProjectId == id)
+                    .Include(pa => pa.User)
+                    .ToListAsync();
+
+                currentShadowAssignments = await _context.ProjectShadowResourceAssignments
+                    .Where(psa => psa.ProjectId == id)
+                    .Include(psa => psa.ShadowResource)
+                    .Include(psa => psa.ProjectOnBoardUser)
+                    .ToListAsync();
+            }
+            else
             {
                 var hasAccess = await _context.ProjectAssignments
-                    .AnyAsync(pa => pa.ProjectId == id && pa.UserId == currentUser.Id) ||
-                    await _context.ProjectShadowResourceAssignments
-                    .AnyAsync(psa => psa.ProjectId == id && psa.ShadowResourceId == currentUser.Id);
+                    .AnyAsync(pa => pa.ProjectId == id && pa.UserId == currentUser.Id);
 
-                if (!hasAccess)
+                var isShadow = await _context.ProjectShadowResourceAssignments
+                    .AnyAsync(psa => psa.ProjectId == id && psa.ShadowResourceId == currentUser.Id && !psa.IsDeleted);
+
+                if (!hasAccess && !isShadow) return Forbid();
+
+                if (hasAccess)
                 {
-                    return Forbid();
+                    currentShadowAssignments = await _context.ProjectShadowResourceAssignments
+                        .Where(psa => psa.ProjectId == id)
+                        .Include(psa => psa.ShadowResource)
+                        .Include(psa => psa.ProjectOnBoardUser)
+                        .ToListAsync();
+                }
+                else
+                {
+                    currentShadowAssignments = await _context.ProjectShadowResourceAssignments
+                        .Where(psa => psa.ProjectId == id)
+                        .Include(psa => psa.ShadowResource)
+                        .Include(psa => psa.ProjectOnBoardUser)
+                        .ToListAsync();
+                }   
+
+                if (!hasAccess && isShadow)
+                {
+                    var shadowAssignment = currentShadowAssignments.FirstOrDefault(psa => psa.ShadowResourceId == currentUser.Id);
+
+                    unifiedTeam.Add(new ProjectTeamMemberViewModel
+                    {
+                        UserId = currentUser.Id,
+                        FullName = currentUser.FullName,
+                        Role = "Shadow Resource",
+                        IsShadow = true,
+                        AddedByUserId = shadowAssignment?.ProjectOnBoardUserId,
+                        AddedByFullName = shadowAssignment?.ProjectOnBoardUser?.FullName ?? "Unknown"
+                    });
                 }
             }
 
-            // Get all employees
-            var employees = await _userManager.GetUsersInRoleAsync("Employee");
-
-            // Get current regular assignments for this project
-            var currentAssignments = await _context.ProjectAssignments
-                .Where(pa => pa.ProjectId == id)
-                .Include(pa => pa.User)
-                .ToListAsync();
-
-            // Get current shadow resource assignments for this project
-            var currentShadowAssignments = await _context.ProjectShadowResourceAssignments
-                .Where(psa => psa.ProjectId == id)
-                .Include(psa => psa.ShadowResource)
-                .Include(psa => psa.ProjectOnBoardUser)
-                .ToListAsync();
-
-            // Filter assignments based on user role
-            if (!userIsAdmin)
+            if (!unifiedTeam.Any())
             {
-                // Regular employees only see their own shadow resources
-                currentAssignments = new List<ProjectAssignment>();
-                currentShadowAssignments = currentShadowAssignments
-                    .Where(psa => psa.ProjectOnBoardUserId == currentUser.Id)
-                    .ToList();
-            }
-
-            // Unified team list with shadow assignment owner info
-            var unifiedTeam = currentAssignments
-                .Select(a => new ProjectTeamMemberViewModel
+                unifiedTeam.AddRange(currentAssignments.Select(a => new ProjectTeamMemberViewModel
                 {
                     UserId = a.UserId,
                     FullName = a.User.FullName,
                     Role = a.Role,
-                    IsShadow = false,
-                    AddedByUserId = null
-                })
-                .ToList();
+                    IsShadow = false
+                }));
 
-            var shadowTeam = currentShadowAssignments
-                .Where(sa => !unifiedTeam.Any(ut => ut.UserId == sa.ShadowResourceId)) // Avoid duplicate if user is also regular
-                .Select(sa => new ProjectTeamMemberViewModel
-                {
-                    UserId = sa.ShadowResourceId,
-                    FullName = sa.ShadowResource.FullName,
-                    Role = "Shadow Resource",
-                    IsShadow = true,
-                    AddedByUserId = sa.ProjectOnBoardUserId,
-                    AddedByFullName = sa.ProjectOnBoardUser?.FullName
-                });
+                unifiedTeam.AddRange(currentShadowAssignments
+                    .Where(sa => !unifiedTeam.Any(ut => ut.UserId == sa.ShadowResourceId))
+                    .Select(sa => new ProjectTeamMemberViewModel
+                    {
+                        UserId = sa.ShadowResourceId,
+                        FullName = sa.ShadowResource.FullName,
+                        Role = "Shadow Resource",
+                        IsShadow = true,
+                        AddedByUserId = sa.ProjectOnBoardUserId,
+                        AddedByFullName = string.IsNullOrEmpty(sa.ProjectOnBoardUser?.FullName) ? "Unknown" : sa.ProjectOnBoardUser.FullName
 
-            unifiedTeam.AddRange(shadowTeam);
 
-            var viewModel = new ProjectAssignmentViewModel
+                    }));
+            }
+
+            return View("Assign", new ProjectAssignmentViewModel
             {
-                ProjectId = id.Value,
+                ProjectId = project.Id,
                 ProjectName = project.Name,
-                AvailableEmployees = employees.ToList(),
+                AvailableEmployees = employees,
                 CurrentAssignments = currentAssignments,
                 CurrentShadowAssignments = currentShadowAssignments,
                 UnifiedTeamMembers = unifiedTeam
-            };
-
-            return View(viewModel);
+            });
         }
+
 
         // POST: Project/AssignEmployee
         [HttpPost]
