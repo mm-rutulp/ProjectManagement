@@ -54,6 +54,7 @@ namespace ProjectManagement.Controllers
 
                 // Recent projects
                 viewModel.RecentProjects = await _context.Projects
+                    .Where(p => !p.IsDeleted)
                     .OrderByDescending(p => p.Id)
                     .Take(5)
                     .ToListAsync();
@@ -70,7 +71,7 @@ namespace ProjectManagement.Controllers
             {
                 // Employee dashboard data
                 viewModel.TotalProjects = await _context.ProjectAssignments
-                    .Where(pa => pa.UserId == currentUser.Id)
+                    .Where(pa => pa.UserId == currentUser.Id )
                     .Select(pa => pa.ProjectId)
                     .Distinct()
                     .CountAsync() +
