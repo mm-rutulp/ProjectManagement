@@ -244,6 +244,7 @@ namespace ProjectManagement.Controllers
 
                 var isShadow = await _context.ProjectShadowResourceAssignments
                     .AnyAsync(psa => psa.ProjectId == id && psa.ShadowResourceId == currentUser.Id && !psa.IsDeleted);
+                ViewBag.isShadow = isShadow;
 
                 if (!hasAccess && !isShadow) return Forbid();
 
