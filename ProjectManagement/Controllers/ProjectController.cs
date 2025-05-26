@@ -472,6 +472,26 @@ namespace ProjectManagement.Controllers
             return RedirectToAction(nameof(Assign), new { id = projectId });
         }
 
+        // POST: Project/RemoveTeamMember
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RemoveTeamMember(string userId, int projectId)
+        {
+            var assignment = await _context.ProjectAssignments
+                .FirstOrDefaultAsync(pa => pa.ProjectId == projectId && pa.UserId == userId);
+
+            if (assignment == null)
+            {
+                return NotFound();
+            }
+
+            _context.ProjectAssignments.Remove(assignment);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Assign), new { id = projectId });
+        }
+
         // API: Project/ClearTestData
         [HttpPost]
         [Authorize(Roles = "Admin")]

@@ -448,6 +448,11 @@ namespace ProjectManagement.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, WorklogCreateViewModel model)
         {
+            if (id != model.WorklogId)
+            {
+                return NotFound();
+            }
+
             var worklog = await _context.Worklogs.FindAsync(id);
             if (worklog == null)
             {
@@ -477,7 +482,8 @@ namespace ProjectManagement.Controllers
                 return RedirectToAction(nameof(Project), new { id = worklog.ProjectId });
             }
             
-            return View(model);
+            model.AvailableUsers = new List<ApplicationUser> { currentUser };
+            return View("Create", model);
         }
 
         // GET: Worklog/Delete/5
