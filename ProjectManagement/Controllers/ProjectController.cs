@@ -238,6 +238,7 @@ namespace ProjectManagement.Controllers
             }
             else
             {
+                employees = (await _userManager.GetUsersInRoleAsync("Employee")).ToList();
                 var hasAccess = await _context.ProjectAssignments
                     .AnyAsync(pa => pa.ProjectId == id && pa.UserId == currentUser.Id);
 
