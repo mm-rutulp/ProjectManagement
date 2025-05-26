@@ -11,8 +11,7 @@
             @(UserManager.GetUserAsync(User).Result?.FullName ?? User.Identity?.Name)
         </a>
         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-            <li><a class="dropdown-item" href="#">Profile</a></li>
-            <li><hr class="dropdown-divider"></li>
+     
             <li>
                 <form class="form-inline" asp-controller="Account" asp-action="Logout" method="post">
                     <button type="submit" class="dropdown-item">Logout</button>
