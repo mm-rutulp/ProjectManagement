@@ -42,15 +42,27 @@ namespace ProjectManagement.Controllers
             }
             else
             {
-                // Regular employees see only their assigned projects
-                var assignedProjects = await _context.ProjectAssignments
-                    .Where(pa => pa.UserId == currentUser.Id && pa.IsDeleted ==false)
+                // Regular users see projects where they are assigned directly or as a shadow resource
+                var regularProjects = await _context.ProjectAssignments
+                    .Where(pa => pa.UserId == currentUser.Id && !pa.IsDeleted && !pa.Project.IsDeleted)
                     .Include(pa => pa.Project)
                     .Select(pa => pa.Project)
                     .Distinct()
                     .ToListAsync();
-                
-                return View(assignedProjects);
+
+                var shadowProjects = await _context.ProjectShadowResourceAssignments
+                    .Where(psa => psa.ShadowResourceId == currentUser.Id && !psa.IsDeleted && !psa.Project.IsDeleted)
+                    .Include(psa => psa.Project)
+                    .Select(psa => psa.Project)
+                    .Distinct()
+                    .ToListAsync();
+
+                var allAssignedProjects = regularProjects
+                    .Union(shadowProjects, new ProjectComparer()) // Use comparer to avoid duplicates
+                    .OrderBy(p => p.Name)
+                    .ToList();
+
+                return View(allAssignedProjects);
             }
         }
 
@@ -197,10 +209,35 @@ namespace ProjectManagement.Controllers
 
             if (project != null && !project.IsDeleted)
             {
+                
                 project.IsDeleted = true;
                 _context.Projects.Update(project);
+
+                
+                var projectAssignments = await _context.ProjectAssignments
+                    .Where(pa => pa.ProjectId == id && !pa.IsDeleted)
+                    .ToListAsync();
+
+                foreach (var assignment in projectAssignments)
+                {
+                    assignment.IsDeleted = true;
+                    _context.ProjectAssignments.Update(assignment);
+                }
+
+               
+                var shadowAssignments = await _context.ProjectShadowResourceAssignments
+                    .Where(psa => psa.ProjectId == id && !psa.IsDeleted)
+                    .ToListAsync();
+
+                foreach (var shadowAssignment in shadowAssignments)
+                {
+                    shadowAssignment.IsDeleted = true;
+                    _context.ProjectShadowResourceAssignments.Update(shadowAssignment);
+                }
+
                 await _context.SaveChangesAsync();
             }
+
 
             return RedirectToAction(nameof(Index));
         }
