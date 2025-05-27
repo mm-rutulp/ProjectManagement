@@ -411,12 +411,22 @@ namespace ProjectManagement.Controllers
             }
 
             var currentUser = await _userManager.GetUserAsync(User);
-            var isAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
-            
+         
+            var isShadowForOwner = await _context.ProjectShadowResourceAssignments
+                .AnyAsync(psa =>
+                   psa.ProjectId == worklog.ProjectId &&
+                   psa.ShadowResourceId == currentUser.Id &&
+                   psa.ProjectOnBoardUserId == worklog.UserId &&
+                   !psa.IsDeleted);
+
             // Only the owner or admin can edit a worklog
-            if (!isAdmin && worklog.UserId != currentUser.Id)
+            if ( worklog.UserId != currentUser.Id && !isShadowForOwner)
             {
-                return Forbid();
+                TempData["UnauthorizedMessage"] = "You are not authorized to edit this worklog.";
+                return RedirectToAction("Project", "Worklog", new { id = worklog.ProjectId });
+
+
+
             }
             var shadowResourceAssignments = await _context.ProjectShadowResourceAssignments
                 .Where(psa => psa.ProjectId == worklog.ProjectId && psa.ShadowResourceId == currentUser.Id)
@@ -524,14 +534,22 @@ namespace ProjectManagement.Controllers
 
             var currentUser = await _userManager.GetUserAsync(User);
             var isAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
-            
-            // Only the owner or admin can delete a worklog
-            if (!isAdmin && worklog.UserId != currentUser.Id)
-            {
-                return Forbid();
-            }
+
+            bool isShadowResource = await _context.ProjectShadowResourceAssignments.AnyAsync(psa =>
+                 psa.ProjectId == worklog.ProjectId &&
+                 psa.ShadowResourceId == currentUser.Id &&
+                 psa.ProjectOnBoardUserId == worklog.UserId &&
+                !psa.IsDeleted
+            );
 
             int projectId = worklog.ProjectId;
+            // Only the owner or admin can delete a worklog
+            if (!isAdmin && worklog.UserId != currentUser.Id && !isShadowResource)
+            {
+                TempData["UnauthorizedMessage"] = "You are not authorized to delete this worklog.";
+                return RedirectToAction(nameof(Project), new { id = projectId });
+            }
+
             worklog.IsDeleted = true;
             _context.Worklogs.Update(worklog);
             await _context.SaveChangesAsync();

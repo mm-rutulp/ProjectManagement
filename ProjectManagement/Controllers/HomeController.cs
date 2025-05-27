@@ -38,28 +38,28 @@ namespace ProjectManagement.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             var isAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
 
-            // Get dashboard data
+            
             var viewModel = new DashboardViewModel();
 
             if (isAdmin)
             {
-                // Admin dashboard data
+                
                 viewModel.TotalProjects = await _context.Projects.CountAsync();
+
                 viewModel.TotalEmployees = await _userManager.GetUsersInRoleAsync("Employee")
                     .ContinueWith(t => t.Result.Count);
+
                 viewModel.ActiveProjects = await _context.Projects
                     .Where(p => p.Status == "In Progress")
                     .CountAsync();
                 viewModel.TotalWorklogs = await _context.Worklogs.CountAsync();
-
-                // Recent projects
+              
                 viewModel.RecentProjects = await _context.Projects
                     .Where(p => !p.IsDeleted)
                     .OrderByDescending(p => p.Id)
                     .Take(5)
                     .ToListAsync();
 
-                // Recent worklogs
                 viewModel.RecentWorklogs = await _context.Worklogs
                     .Include(w => w.Project)
                     .Include(w => w.User)
@@ -69,20 +69,20 @@ namespace ProjectManagement.Controllers
             }
             else
             {
-                // Employee dashboard data
+              
                 viewModel.TotalProjects = await _context.ProjectAssignments
-                    .Where(pa => pa.UserId == currentUser.Id )
+                    .Where(pa => pa.UserId == currentUser.Id && !pa.IsDeleted)
                     .Select(pa => pa.ProjectId)
                     .Distinct()
                     .CountAsync() +
                     await _context.ProjectShadowResourceAssignments
-                    .Where(psa => psa.ShadowResourceId == currentUser.Id)
+                    .Where(psa => psa.ShadowResourceId == currentUser.Id && !psa.IsDeleted)
                     .Select(psa => psa.ProjectId)
                     .Distinct()
                     .CountAsync();
 
                 viewModel.ActiveProjects = await _context.ProjectAssignments
-                    .Where(pa => pa.UserId == currentUser.Id)
+                    .Where(pa => pa.UserId == currentUser.Id && !pa.IsDeleted)
                     .Join(_context.Projects.Where(p => p.Status == "In Progress"),
                         pa => pa.ProjectId,
                         p => p.Id,
@@ -90,7 +90,7 @@ namespace ProjectManagement.Controllers
                     .Distinct()
                     .CountAsync() +
                     await _context.ProjectShadowResourceAssignments
-                    .Where(psa => psa.ShadowResourceId == currentUser.Id)
+                    .Where(psa => psa.ShadowResourceId == currentUser.Id && !psa.IsDeleted)
                     .Join(_context.Projects.Where(p => p.Status == "In Progress"),
                         psa => psa.ProjectId,
                         p => p.Id,
@@ -102,23 +102,23 @@ namespace ProjectManagement.Controllers
                     .Where(w => w.UserId == currentUser.Id)
                     .CountAsync();
 
-                // Calculate total hours logged
+                
                 var allUserWorklogs = await _context.Worklogs
                     .Where(w => w.UserId == currentUser.Id)
                     .ToListAsync();
                 
                 viewModel.TotalHours = allUserWorklogs.Sum(w => w.HoursWorked);
 
-                // User's projects (both regular and shadow resource assignments)
+              
                 var regularProjects = await _context.ProjectAssignments
-                    .Where(pa => pa.UserId == currentUser.Id)
+                    .Where(pa => pa.UserId == currentUser.Id && !pa.IsDeleted)
                     .Include(pa => pa.Project)
                     .Select(pa => pa.Project)
                     .Distinct()
                     .ToListAsync();
 
                 var shadowProjects = await _context.ProjectShadowResourceAssignments
-                    .Where(psa => psa.ShadowResourceId == currentUser.Id)
+                    .Where(psa => psa.ShadowResourceId == currentUser.Id && !psa.IsDeleted)
                     .Include(psa => psa.Project)
                     .Select(psa => psa.Project)
                     .Distinct()
@@ -129,7 +129,7 @@ namespace ProjectManagement.Controllers
                     .OrderBy(p => p.Name)
                     .ToList();
 
-                // Recent worklogs
+              
                 viewModel.RecentWorklogs = await _context.Worklogs
                     .Where(w => w.UserId == currentUser.Id)
                     .Include(w => w.Project)
