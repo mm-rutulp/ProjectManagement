@@ -66,7 +66,7 @@ using (var scope = app.Services.CreateScope())
         context.Database.Migrate();
         
         // Seed initial data
-//        DbInitializer.InitializeAsync(services).Wait();
+        DbInitializer.InitializeAsync(services).Wait();
     }
     catch (Exception ex)
     {

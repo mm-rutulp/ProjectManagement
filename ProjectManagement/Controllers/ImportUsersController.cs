@@ -45,41 +45,41 @@ namespace ProjectManagement.Controllers
                 var email = row.Cell(2).GetValue<string>().Trim();
                 var role = row.Cell(3).GetValue<string>().Trim();
 
-                var user = new ApplicationUser
+                var userExist = await _userManager.FindByEmailAsync(email);
+                if (userExist == null)
                 {
-                    UserName = email,
-                    Email = email,
-                    FullName = fullName,
-                    Department = null,
-                    Position = null
-                };
-                var password = GenerateRandomPassword();
-                var result = await _userManager.CreateAsync(user, password); // Default password
-
-                if (result.Succeeded)
-                {
-                    await _userManager.AddToRoleAsync(user, role);
-                    EmailSender emailSender = new EmailSender(new EmailConfiguration()
+                    var user = new ApplicationUser
                     {
-                        From = "mmdevs365@gmail.com",
-                        Password = "naoo zxav gvsd lfpe",
-                        Port = 465,
-                        SmtpServer = "smtp.gmail.com",
-                        UserName = "mmdevs365@gmail.com",
-                        UseSSL = true,
-                        TargetName = null,
-                    });
-                    string subject = "Welcome to the Project Management System";
-                    string htmlContent = $"<p>Dear {fullName},</p><p>Your account has been created successfully.</p><p>Your login details are as follows:</p><p>Email: {email}</p><p>Password: {password}</p><p>To access the portal please go to this URL: 192.168.1.78:82</p>";
-                    EmailHelper _email = new EmailHelper(emailSender);
+                        UserName = email,
+                        Email = email,
+                        FullName = fullName,
+                        Department = null,
+                        Position = null
+                    };
+                    var password = GenerateRandomPassword();
+                    var result = await _userManager.CreateAsync(user, password); // Default password
 
-                    List<string> emaillist = new List<string>();
-                    emaillist.Add(email);
-                    var data = await _email.SendEmail(subject: subject, htmlContent: htmlContent, to: emaillist, cc: null);
-                }
-                else
-                {
-                    // Optionally log errors
+                    if (result.Succeeded)
+                    {
+                        await _userManager.AddToRoleAsync(user, role);
+                        EmailSender emailSender = new EmailSender(new EmailConfiguration()
+                        {
+                            From = "mmdevs365@gmail.com",
+                            Password = "naoo zxav gvsd lfpe",
+                            Port = 465,
+                            SmtpServer = "smtp.gmail.com",
+                            UserName = "mmdevs365@gmail.com",
+                            UseSSL = true,
+                            TargetName = null,
+                        });
+                        string subject = "Welcome to the Project Management System";
+                        string htmlContent = $"<p>Dear {fullName},</p><p>Your account has been created successfully.</p><p>Your login details are as follows:</p><p>Email: {email}</p><p>Password: {password}</p><p>To access the portal please go to this URL: https://pms.magnusminds.net/</p>";
+                        EmailHelper _email = new EmailHelper(emailSender);
+
+                        List<string> emaillist = new List<string>();
+                        emaillist.Add(email);
+                        var data = await _email.SendEmail(subject: subject, htmlContent: htmlContent, to: emaillist, cc: null);
+                    }
                 }
             }
 

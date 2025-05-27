@@ -62,106 +62,106 @@ namespace ProjectManagement.Data
             }
 
             // Create default employee user if it doesn't exist
-            var employeeEmail = "employee@projectmanagement.com";
-            var employeeUser = await userManager.FindByEmailAsync(employeeEmail);
-            if (employeeUser == null)
-            {
-                var employee = new ApplicationUser
-                {
-                    UserName = employeeEmail,
-                    Email = employeeEmail,
-                    FullName = "Default Employee",
-                    EmailConfirmed = true,
-                    Department = "Engineering",
-                    Position = "Software Developer"
-                };
+            //var employeeEmail = "employee@projectmanagement.com";
+            //var employeeUser = await userManager.FindByEmailAsync(employeeEmail);
+            //if (employeeUser == null)
+            //{
+            //    var employee = new ApplicationUser
+            //    {
+            //        UserName = employeeEmail,
+            //        Email = employeeEmail,
+            //        FullName = "Default Employee",
+            //        EmailConfirmed = true,
+            //        Department = "Engineering",
+            //        Position = "Software Developer"
+            //    };
 
-                var employeePassword = "Employee@123";
-                var result = await userManager.CreateAsync(employee, employeePassword);
-                if (result.Succeeded)
-                {
-                    await userManager.AddToRoleAsync(employee, "Employee");
-                    Console.WriteLine($"Employee user created successfully. Email: {employeeEmail}, Password: {employeePassword}");
-                }
-                else
-                {
-                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                    Console.WriteLine($"Failed to create employee user: {errors}");
-                }
-            }
-            else
-            {
-                // Make sure we have the employee user object for later use
-                employeeUser = await userManager.FindByEmailAsync(employeeEmail);
-            }
+            //    var employeePassword = "Employee@123";
+            //    var result = await userManager.CreateAsync(employee, employeePassword);
+            //    if (result.Succeeded)
+            //    {
+            //        await userManager.AddToRoleAsync(employee, "Employee");
+            //        Console.WriteLine($"Employee user created successfully. Email: {employeeEmail}, Password: {employeePassword}");
+            //    }
+            //    else
+            //    {
+            //        var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            //        Console.WriteLine($"Failed to create employee user: {errors}");
+            //    }
+            //}
+            //else
+            //{
+            //    // Make sure we have the employee user object for later use
+            //    employeeUser = await userManager.FindByEmailAsync(employeeEmail);
+            //}
             
-            // Create a second default employee user if it doesn't exist
-            var employee2Email = "employee2@projectmanagement.com";
-            var employee2User = await userManager.FindByEmailAsync(employee2Email);
-            if (employee2User == null)
-            {
-                var employee2 = new ApplicationUser
-                {
-                    UserName = employee2Email,
-                    Email = employee2Email,
-                    FullName = "Default Employee 2",
-                    EmailConfirmed = true,
-                    Department = "Quality Assurance",
-                    Position = "QA Engineer"
-                };
+            //// Create a second default employee user if it doesn't exist
+            //var employee2Email = "employee2@projectmanagement.com";
+            //var employee2User = await userManager.FindByEmailAsync(employee2Email);
+            //if (employee2User == null)
+            //{
+            //    var employee2 = new ApplicationUser
+            //    {
+            //        UserName = employee2Email,
+            //        Email = employee2Email,
+            //        FullName = "Default Employee 2",
+            //        EmailConfirmed = true,
+            //        Department = "Quality Assurance",
+            //        Position = "QA Engineer"
+            //    };
 
-                var employee2Password = "Employee2@123";
-                var result = await userManager.CreateAsync(employee2, employee2Password);
-                if (result.Succeeded)
-                {
-                    await userManager.AddToRoleAsync(employee2, "Employee");
-                    Console.WriteLine($"Employee2 user created successfully. Email: {employee2Email}, Password: {employee2Password}");
-                }
-                else
-                {
-                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                    Console.WriteLine($"Failed to create employee2 user: {errors}");
-                }
-            }
-            else
-            {
-                // Make sure we have the employee2 user object for later use
-                employee2User = await userManager.FindByEmailAsync(employee2Email);
-            }
+            //    var employee2Password = "Employee2@123";
+            //    var result = await userManager.CreateAsync(employee2, employee2Password);
+            //    if (result.Succeeded)
+            //    {
+            //        await userManager.AddToRoleAsync(employee2, "Employee");
+            //        Console.WriteLine($"Employee2 user created successfully. Email: {employee2Email}, Password: {employee2Password}");
+            //    }
+            //    else
+            //    {
+            //        var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            //        Console.WriteLine($"Failed to create employee2 user: {errors}");
+            //    }
+            //}
+            //else
+            //{
+            //    // Make sure we have the employee2 user object for later use
+            //    employee2User = await userManager.FindByEmailAsync(employee2Email);
+            //}
 
-            // Create shadow employee user if it doesn't exist
-            var shadowEmail = "shadow@projectmanagement.com";
-            var shadowUser = await userManager.FindByEmailAsync(shadowEmail);
-            if (shadowUser == null)
-            {
-                var shadow = new ApplicationUser
-                {
-                    UserName = shadowEmail,
-                    Email = shadowEmail,
-                    FullName = "Shadow Employee",
-                    EmailConfirmed = true,
-                    Department = "External",
-                    Position = "Shadow Resource"
-                };
+            //// Create shadow employee user if it doesn't exist
+            //var shadowEmail = "shadow@projectmanagement.com";
+            //var shadowUser = await userManager.FindByEmailAsync(shadowEmail);
+            //if (shadowUser == null)
+            //{
+            //    var shadow = new ApplicationUser
+            //    {
+            //        UserName = shadowEmail,
+            //        Email = shadowEmail,
+            //        FullName = "Shadow Employee",
+            //        EmailConfirmed = true,
+            //        Department = "External",
+            //        Position = "Shadow Resource"
+            //    };
 
-                var shadowPassword = "Shadow@123";
-                var result = await userManager.CreateAsync(shadow, shadowPassword);
-                if (result.Succeeded)
-                {
-                    await userManager.AddToRoleAsync(shadow, "Employee");
-                    Console.WriteLine($"Shadow employee created successfully. Email: {shadowEmail}, Password: {shadowPassword}");
-                }
-                else
-                {
-                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                    Console.WriteLine($"Failed to create shadow employee: {errors}");
-                }
-            }
-            else
-            {
-                // Make sure we have the shadow user object for later use
-                shadowUser = await userManager.FindByEmailAsync(shadowEmail);
-            }
+            //    var shadowPassword = "Shadow@123";
+            //    var result = await userManager.CreateAsync(shadow, shadowPassword);
+            //    if (result.Succeeded)
+            //    {
+            //        await userManager.AddToRoleAsync(shadow, "Employee");
+            //        Console.WriteLine($"Shadow employee created successfully. Email: {shadowEmail}, Password: {shadowPassword}");
+            //    }
+            //    else
+            //    {
+            //        var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            //        Console.WriteLine($"Failed to create shadow employee: {errors}");
+            //    }
+            //}
+            //else
+            //{
+            //    // Make sure we have the shadow user object for later use
+            //    shadowUser = await userManager.FindByEmailAsync(shadowEmail);
+            //}
 
             Console.WriteLine("Database initialization completed successfully.");
         }
