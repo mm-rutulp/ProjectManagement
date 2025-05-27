@@ -413,11 +413,12 @@ namespace ProjectManagement.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             var isAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
             
-            // Only the owner or admin can edit a worklog
-            if (!isAdmin && worklog.UserId != currentUser.Id)
+            // Allow edit if user is admin, owner, or the shadow resource who created the worklog
+            if (!isAdmin && worklog.UserId != currentUser.Id && worklog.ShadowResourceId != currentUser.Id)
             {
                 return Forbid();
             }
+
             var shadowResourceAssignments = await _context.ProjectShadowResourceAssignments
                 .Where(psa => psa.ProjectId == worklog.ProjectId && psa.ShadowResourceId == currentUser.Id)
                 .Include(psa => psa.ProjectOnBoardUser)
@@ -448,6 +449,11 @@ namespace ProjectManagement.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, WorklogCreateViewModel model)
         {
+            if (id != model.WorklogId)
+            {
+                return NotFound();
+            }
+
             var worklog = await _context.Worklogs.FindAsync(id);
             if (worklog == null)
             {
@@ -457,8 +463,8 @@ namespace ProjectManagement.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             var isAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
             
-            // Only the owner or admin can edit a worklog
-            if (!isAdmin && worklog.UserId != currentUser.Id)
+            // Allow edit if user is admin, owner, or the shadow resource who created the worklog
+            if (!isAdmin && worklog.UserId != currentUser.Id && worklog.ShadowResourceId != currentUser.Id)
             {
                 return Forbid();
             }
@@ -477,7 +483,8 @@ namespace ProjectManagement.Controllers
                 return RedirectToAction(nameof(Project), new { id = worklog.ProjectId });
             }
             
-            return View(model);
+            model.AvailableUsers = new List<ApplicationUser> { currentUser };
+            return View("Create", model);
         }
 
         // GET: Worklog/Delete/5
@@ -502,8 +509,8 @@ namespace ProjectManagement.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             var isAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
             
-            // Only the owner or admin can delete a worklog
-            if (!isAdmin && worklog.UserId != currentUser.Id)
+            // Allow delete if user is admin, owner, or the shadow resource who created the worklog
+            if (!isAdmin && worklog.UserId != currentUser.Id && worklog.ShadowResourceId != currentUser.Id)
             {
                 return Forbid();
             }
@@ -525,8 +532,8 @@ namespace ProjectManagement.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             var isAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
             
-            // Only the owner or admin can delete a worklog
-            if (!isAdmin && worklog.UserId != currentUser.Id)
+            // Allow delete if user is admin, owner, or the shadow resource who created the worklog
+            if (!isAdmin && worklog.UserId != currentUser.Id && worklog.ShadowResourceId != currentUser.Id)
             {
                 return Forbid();
             }
