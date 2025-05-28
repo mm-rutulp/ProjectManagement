@@ -12,10 +12,11 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-body">
-                    <form asp-action="Create">
+                    <form asp-action="@(Model.WorklogId > 0 ? "Edit" : "Create")" asp-route-id="@(Model.WorklogId > 0 ? Model.WorklogId : null)">
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                         <input type="hidden" asp-for="ProjectId" />
                         <input type="hidden" asp-for="ProjectName" />
+                        <input type="hidden" asp-for="WorklogId" />
                         
                         <div class="form-group mb-3">
                             <label asp-for="UserId" class="form-label">User</label>
