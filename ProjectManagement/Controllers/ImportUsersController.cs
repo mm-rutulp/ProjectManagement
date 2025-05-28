@@ -35,6 +35,8 @@ namespace ProjectManagement.Controllers
         }
 
         //allow employee to be added 
+ 
+  
         [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> MarkAsCreated(int id)
@@ -45,12 +47,68 @@ namespace ProjectManagement.Controllers
                 return NotFound();
             }
 
-            employee.IsCreated = true;
-            await _context.SaveChangesAsync();
+            // Check if the user already exists
+            var existingUser = await _userManager.FindByEmailAsync(employee.Email);
+            if (existingUser == null)
+            {
+                var password = GenerateRandomPassword();
 
-            TempData["Success"] = "Employee marked as created.";
+                var newUser = new ApplicationUser
+                {
+                    UserName = employee.Email,
+                    Email = employee.Email,
+                    FullName = employee.EmployeeName
+                    // Department, Position, etc. left as null
+                };
+
+                var result = await _userManager.CreateAsync(newUser, password);
+
+                if (result.Succeeded)
+                {
+                    // Optional: Assign to default role
+                    await _userManager.AddToRoleAsync(newUser, "Employee");
+
+                    // Send email with credentials
+                    var emailSender = new EmailSender(new EmailConfiguration
+                    {
+                        From = "mmdevs365@gmail.com",
+                        Password = "naoo zxav gvsd lfpe",
+                        Port = 465,
+                        SmtpServer = "smtp.gmail.com",
+                        UserName = "mmdevs365@gmail.com",
+                        UseSSL = true
+                    });
+
+                    string subject = "Welcome to the Project Management System";
+                    string htmlContent = $@"
+                    <p>Dear {employee.EmployeeName},</p>
+                    <p>Your account has been created.</p>
+                    <p><strong>Email:</strong> {employee.Email}</p>
+                    <p><strong>Password:</strong> {password}</p>
+                    <p>Login: <a href='https://pms.magnusminds.net/'>Project Management Portal</a></p>";
+
+                    var emailHelper = new EmailHelper(emailSender);
+                    await emailHelper.SendEmail(subject, htmlContent, new List<string> { employee.Email });
+
+                    // ✅ Mark employee as created in your table
+                    employee.IsCreated = true;
+                    await _context.SaveChangesAsync();
+
+                    TempData["Success"] = "User created and notified successfully.";
+                }
+                else
+                {
+                    TempData["Error"] = "User creation failed: " + string.Join(", ", result.Errors.Select(e => e.Description));
+                }
+            }
+            else
+            {
+                TempData["Error"] = "User already exists.";
+            }
+
             return RedirectToAction("Index");
         }
+
 
         // Non-admin form (GET)
         [AllowAnonymous]
