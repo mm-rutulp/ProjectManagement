@@ -102,7 +102,18 @@ namespace ProjectManagement.Controllers
                     .Where(w => w.UserId == currentUser.Id)
                     .CountAsync();
 
-                
+                /* this will get total worklogs of regula users only
+                                 var currenttime = DateTime.UtcNow;
+                 var firstDayOfMonth = new DateTime(currenttime.Year, currenttime.Month, 1);
+
+                 var monthlyUserWorklogs = await _context.Worklogs
+                     .Where(w => w.UserId == currentUser.Id &&
+                                 w.Date >= firstDayOfMonth &&
+                                 !w.IsDeleted)
+                     .ToListAsync();
+
+                 viewModel.TotalHours = monthlyUserWorklogs.Sum(w => w.HoursWorked);
+                 */
                 var allUserWorklogs = await _context.Worklogs
                     .Where(w => w.UserId == currentUser.Id)
                     .ToListAsync();
