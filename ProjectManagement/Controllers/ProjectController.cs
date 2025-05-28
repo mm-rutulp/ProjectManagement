@@ -78,7 +78,7 @@ namespace ProjectManagement.Controllers
             if (!userIsAdmin)
             {
                 var hasRegularAccess = await _context.ProjectAssignments
-                    .AnyAsync(pa => pa.ProjectId == id && pa.UserId == currentUser.Id);
+                    .AnyAsync(pa => pa.ProjectId == id && pa.UserId == currentUser.Id && !pa.IsDeleted);
 
                 var isShadowResource = await _context.ProjectShadowResourceAssignments
                     .AnyAsync(psa => psa.ProjectId == id && psa.ShadowResourceId == currentUser.Id && !psa.IsDeleted);
@@ -226,7 +226,7 @@ namespace ProjectManagement.Controllers
             {
                 employees = (await _userManager.GetUsersInRoleAsync("Employee")).ToList();
                 currentAssignments = await _context.ProjectAssignments
-                    .Where(pa => pa.ProjectId == id)
+                    .Where(pa => pa.ProjectId == id && !pa.IsDeleted)
                     .Include(pa => pa.User)
                     .ToListAsync();
 
@@ -240,7 +240,7 @@ namespace ProjectManagement.Controllers
             {
                 employees = (await _userManager.GetUsersInRoleAsync("Employee")).ToList();
                 var hasAccess = await _context.ProjectAssignments
-                    .AnyAsync(pa => pa.ProjectId == id && pa.UserId == currentUser.Id);
+                    .AnyAsync(pa => pa.ProjectId == id && pa.UserId == currentUser.Id && !pa.IsDeleted);
 
                 var isShadow = await _context.ProjectShadowResourceAssignments
                     .AnyAsync(psa => psa.ProjectId == id && psa.ShadowResourceId == currentUser.Id && !psa.IsDeleted);
@@ -331,7 +331,7 @@ namespace ProjectManagement.Controllers
 
             // Check if the user is already assigned to this project
             var existingAssignment = await _context.ProjectAssignments
-                .FirstOrDefaultAsync(pa => pa.ProjectId == model.ProjectId && pa.UserId == model.UserId);
+                .FirstOrDefaultAsync(pa => pa.ProjectId == model.ProjectId && pa.UserId == model.UserId && !pa.IsDeleted);
 
             if (existingAssignment == null)
             {
@@ -365,7 +365,7 @@ namespace ProjectManagement.Controllers
 
             // Prevent assigning shadow role to someone already a regular developer
             var isAlreadyRegularDeveloper = await _context.ProjectAssignments
-                .AnyAsync(pa => pa.ProjectId == model.ProjectId && pa.UserId == model.UserId);
+                .AnyAsync(pa => pa.ProjectId == model.ProjectId && pa.UserId == model.UserId && !pa.IsDeleted);
 
             if (isAlreadyRegularDeveloper)
             {
@@ -441,6 +441,26 @@ namespace ProjectManagement.Controllers
 
             _context.ProjectShadowResourceAssignments.Remove(shadowAssignment);
             await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Assign), new { id = projectId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RemoveTeamMember(string userId, int projectId)
+        {
+            var assignment = await _context.ProjectAssignments
+                .FirstOrDefaultAsync(pa => pa.ProjectId == projectId && pa.UserId == userId && !pa.IsDeleted);
+
+            if (assignment == null)
+            {
+                return NotFound();
+            }
+
+            assignment.IsDeleted = true;
+            _context.ProjectAssignments.Update(assignment);
+            await _context.SaveChangesAsync();
+
             return RedirectToAction(nameof(Assign), new { id = projectId });
         }
 

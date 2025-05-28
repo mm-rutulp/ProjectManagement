@@ -71,7 +71,7 @@ namespace ProjectManagement.Controllers
             {
                 // Employee dashboard data
                 viewModel.TotalProjects = await _context.ProjectAssignments
-                    .Where(pa => pa.UserId == currentUser.Id )
+                    .Where(pa => pa.UserId == currentUser.Id && !pa.IsDeleted)
                     .Select(pa => pa.ProjectId)
                     .Distinct()
                     .CountAsync() +
@@ -82,7 +82,7 @@ namespace ProjectManagement.Controllers
                     .CountAsync();
 
                 viewModel.ActiveProjects = await _context.ProjectAssignments
-                    .Where(pa => pa.UserId == currentUser.Id)
+                    .Where(pa => pa.UserId == currentUser.Id && !pa.IsDeleted)
                     .Join(_context.Projects.Where(p => p.Status == "In Progress"),
                         pa => pa.ProjectId,
                         p => p.Id,
@@ -111,7 +111,7 @@ namespace ProjectManagement.Controllers
 
                 // User's projects (both regular and shadow resource assignments)
                 var regularProjects = await _context.ProjectAssignments
-                    .Where(pa => pa.UserId == currentUser.Id)
+                    .Where(pa => pa.UserId == currentUser.Id && !pa.IsDeleted)
                     .Include(pa => pa.Project)
                     .Select(pa => pa.Project)
                     .Distinct()

@@ -43,7 +43,7 @@ namespace ProjectManagement.Controllers
 
             // Get projects assigned to this employee
             var assignedProjects = await _context.ProjectAssignments
-                .Where(pa => pa.UserId == id)
+                .Where(pa => pa.UserId == id && !pa.IsDeleted)
                 .Include(pa => pa.Project)
                 .OrderBy(pa => pa.Project.Name)
                 .ToListAsync();
@@ -192,7 +192,7 @@ namespace ProjectManagement.Controllers
 
             // First remove any project assignments
             var assignments = await _context.ProjectAssignments
-                .Where(pa => pa.UserId == id)
+                .Where(pa => pa.UserId == id && !pa.IsDeleted)
                 .ToListAsync();
             
             _context.ProjectAssignments.RemoveRange(assignments);
