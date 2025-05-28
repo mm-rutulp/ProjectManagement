@@ -198,7 +198,7 @@ namespace ProjectManagement.Controllers
 
             // First remove any project assignments
             var assignments = await _context.ProjectAssignments
-                .Where(pa => pa.UserId == id)
+                .Where(pa => pa.UserId == id && !pa.IsDeleted)
                 .ToListAsync();
             
             _context.ProjectAssignments.RemoveRange(assignments);
