@@ -469,9 +469,13 @@ namespace ProjectManagement.Controllers
 
             var currentUser = await _userManager.GetUserAsync(User);
             var isAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
-            
+            var isShadowResource = await _context.ProjectShadowResourceAssignments
+            .AnyAsync(psa =>
+                psa.ProjectId == worklog.ProjectId &&
+                psa.ShadowResourceId == currentUser.Id &&
+                !psa.IsDeleted);
             // Only the owner or admin can edit a worklog
-            if (!isAdmin && worklog.UserId != currentUser.Id)
+            if (!isAdmin && worklog.UserId != currentUser.Id && !isShadowResource)
             {
                 return Forbid();
             }
@@ -486,10 +490,10 @@ namespace ProjectManagement.Controllers
 
                 _context.Update(worklog);
                 await _context.SaveChangesAsync();
-                
+
                 return RedirectToAction(nameof(Project), new { id = worklog.ProjectId });
             }
-            
+
             return View(model);
         }
 
