@@ -41,6 +41,9 @@ namespace ProjectManagement.Controllers
             return View(userWorklogs);
         }
 
+        //get detailed worklog based on id 
+
+
 
         // GET: Worklog/Project/5
         public async Task<IActionResult> Project(int? id, string? userId, DateTime? startDate, DateTime? endDate)

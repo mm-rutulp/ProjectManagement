@@ -19,63 +19,59 @@
     }
 </div>
 
-<div class="row g-4">
-    @foreach (var project in Model)
-    {
-        <div class="col-12 col-md-6 col-lg-4">
-            <div class="card h-100" style="background-color: #f8f9fa;">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 text-truncate" style="max-width: 70%;">@project.Name</h5>
-                        <span class="badge @(project.Status == "Active" ? "bg-success" : "bg-primary") ms-2">
-                            @project.Status
-                        </span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <p class="card-text mb-3" style="color: #495057;">
-                        @(project.Description?.Length > 100 ? project.Description.Substring(0, 100) + "..." : project.Description)
-                    </p>
-                    <div class="d-flex flex-column gap-2">
-                        <div class="d-flex align-items-center" style="color: #6c757d;">
-                            <i class="bi bi-calendar me-2"></i>
-                            <span>Start: @project.StartDate.ToString("MMM dd, yyyy")</span>
-                        </div>
-                        <div class="d-flex align-items-center" style="color: #6c757d;">
-                            <i class="bi bi-calendar-check me-2"></i>
-                            <span>End: @(project.EndDate?.ToString("MMM dd, yyyy") ?? "Not set")</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <div class="d-grid gap-2">
-                        <div class="btn-group w-100">
-                            <a asp-action="Details" asp-route-id="@project.Id" class="btn btn-outline-primary">
-                                <i class="bi bi-info-circle me-1"></i> Details
-                            </a>
-                            <a asp-controller="Worklog" asp-action="Project" asp-route-id="@project.Id" class="btn btn-outline-secondary">
-                                <i class="bi bi-clock me-1"></i> Worklogs
-                            </a>
-                        </div>
-                        @if (isAdmin)
-                        {
-                            <div class="btn-group w-100">
-                                <a asp-action="Edit" asp-route-id="@project.Id" class="btn btn-outline-warning">
-                                    <i class="bi bi-pencil me-1"></i> Edit
+@if (Model.Any())
+{
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-primary">
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var project in Model)
+                {
+                    <tr>
+                        <td>@project.Name</td>
+                        <td>@(project.Description?.Length > 100 ? project.Description.Substring(0, 100) + "..." : project.Description)</td>
+                        <td>
+                            <span class="badge @(project.Status == "Active" ? "bg-success" : "bg-secondary")">
+                                @project.Status
+                            </span>
+                        </td>
+                        <td>@project.StartDate.ToString("MMM dd, yyyy")</td>
+                        <td>@(project.EndDate?.ToString("MMM dd, yyyy") ?? "Not set")</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a asp-action="Details" asp-route-id="@project.Id" class="btn btn-outline-primary" title="Details">
+                                    <i class="bi bi-info-circle"></i>
                                 </a>
-                                <a asp-action="Delete" asp-route-id="@project.Id" class="btn btn-outline-danger">
-                                    <i class="bi bi-trash me-1"></i> Delete
+                                <a asp-controller="Worklog" asp-action="Project" asp-route-id="@project.Id" class="btn btn-outline-secondary" title="Worklogs">
+                                    <i class="bi bi-clock"></i>
                                 </a>
+                                @if (isAdmin)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@project.Id" class="btn btn-outline-warning" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a asp-action="Delete" asp-route-id="@project.Id" class="btn btn-outline-danger" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                }
                             </div>
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-</div>
-
-@if (!Model.Any())
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
 {
     <div class="alert alert-info">
         <i class="bi bi-info-circle"></i> No projects found.
@@ -86,4 +82,4 @@
     <script>
         // Add any JavaScript for project management functionality here
     </script>
-} 
+}

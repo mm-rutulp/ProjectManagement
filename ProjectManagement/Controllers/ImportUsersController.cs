@@ -4,27 +4,75 @@ using MagnusMinds.Utility.EmailService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using ProjectManagement.Data;
 using ProjectManagement.Models;
 using ProjectManagement.Services;
 
 namespace ProjectManagement.Controllers
 {
-    [Authorize(Roles = "Admin")]
+
+   
     public class ImportUsersController : Controller
     {
+
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly ApplicationDbContext _context;
 
-        public ImportUsersController(UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager)
+        public ImportUsersController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager,ApplicationDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _context = context;
         }
 
+
+        [Authorize(Roles = "Admin")]
         public IActionResult Index()
         {
-            return View();
+            var employeeRequests = _context.EmployeeRegistration.ToList();
+            return View(employeeRequests);
+        }
+
+        //allow employee to be added 
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        public async Task<IActionResult> MarkAsCreated(int id)
+        {
+            var employee = await _context.EmployeeRegistration.FindAsync(id);
+            if (employee == null)
+            {
+                return NotFound();
+            }
+
+            employee.IsCreated = true;
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Employee marked as created.";
+            return RedirectToAction("Index");
+        }
+
+        // Non-admin form (GET)
+        [AllowAnonymous]
+        [HttpGet]
+        public IActionResult RequestEmployee()
+        {
+            return View("EmployeeRegistration");
+        }
+
+        [AllowAnonymous]
+        [HttpPost]
+        public async Task<IActionResult> RequestEmployee(EmployeeRegistration model)
+        {
+            if (ModelState.IsValid)
+            {
+                _context.EmployeeRegistration.Add(model);
+                await _context.SaveChangesAsync();
+                TempData["Success"] = "Request submitted successfully.";
+                return RedirectToAction("RequestEmployee");
+            }
+
+            return View("EmployeeRegistration",model);
         }
 
         [HttpPost("upload")]

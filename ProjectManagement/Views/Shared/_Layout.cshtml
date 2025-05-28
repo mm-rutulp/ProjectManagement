@@ -185,6 +185,23 @@
                                 </a>
                             </li>
                         }
+                        @if (isAdmin)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="ImportUsers" asp-action="Index">
+                                    <i class="bi bi bi-person"></i> Add Employee
+                                </a>
+                            </li>
+                        }
+                        @if (!isAdmin)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="ImportUsers" asp-action="RequestEmployee">
+                                    <i class="bi bi-person-plus"></i> Employee Request
+                                </a>
+                            </li>
+                        }
+
                     </ul>
                     <partial name="_LoginPartial" />
                 </div>

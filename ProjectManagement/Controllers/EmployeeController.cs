@@ -21,10 +21,16 @@ namespace ProjectManagement.Controllers
         }
 
         // GET: Employee
-        public async Task<IActionResult> Index()
+        [HttpGet("Employee/Index")]
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
         {
             var employees = await _userManager.GetUsersInRoleAsync("Employee");
-            return View(employees);
+            var paginated = employees.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling((double)employees.Count / pageSize);
+
+            return View(paginated);
         }
 
         // GET: Employee/Details/5
@@ -43,14 +49,14 @@ namespace ProjectManagement.Controllers
 
             // Get projects assigned to this employee
             var assignedProjects = await _context.ProjectAssignments
-                .Where(pa => pa.UserId == id)
+                .Where(pa => pa.UserId == id && !pa.IsDeleted)
                 .Include(pa => pa.Project)
                 .OrderBy(pa => pa.Project.Name)
                 .ToListAsync();
                 
             // Get shadow resource assignments for this employee
             var shadowAssignments = await _context.ProjectShadowResourceAssignments
-                .Where(psa => psa.ShadowResourceId == id)
+                .Where(psa => psa.ShadowResourceId == id && !psa.IsDeleted)
                 .Include(psa => psa.Project)
                 .Include(psa => psa.ProjectOnBoardUser)
                 .OrderBy(psa => psa.Project.Name)

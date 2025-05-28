@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Employees";
+    var currentPage = ViewBag.CurrentPage as int? ?? 1;
+    var totalPages = ViewBag.TotalPages as int? ?? 1;
 }
 
 <div class="container">
@@ -27,22 +29,34 @@
                     <tbody>
                         @foreach (var item in Model)
                         {
-                            <tr>
-                                <td>@item.FullName</td>
-                                <td>@item.Email</td>
-                                <td>@item.Department</td>
-                                <td>@item.Position</td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary">Details</a>
-                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-warning">Edit</a>
-                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger">Delete</a>
-                                    </div>
-                                </td>
-                            </tr>
+                        <tr>
+                            <td>@item.FullName</td>
+                            <td>@item.Email</td>
+                            <td>@item.Department</td>
+                            <td>@item.Position</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary" title="Details">
+                                        <i class="bi bi-info-circle"></i>
+                                    </a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-warning" title="Edit">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+
                         }
                     </tbody>
                 </table>
+
+              
+            
+                <div id="pagination" class="mt-4 text-center"></div>
+
             }
             else
             {
@@ -52,4 +66,41 @@
             }
         </div>
     </div>
-</div> 
+</div>
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const currentPage = @ViewBag.CurrentPage;
+            const totalPages = @ViewBag.TotalPages;
+            const paginationContainer = document.getElementById("pagination");
+
+            if (totalPages > 1) {
+                let html = '<nav aria-label="Page navigation"><ul class="pagination justify-content-center">';
+
+                if (currentPage > 1) {
+                    html += `<li class="page-item">
+                                <a class="page-link" href="?page=${currentPage - 1}">...</a>
+                             </li>`;
+                }
+
+               
+                for (let i = 1; i <= totalPages; i++) {
+                    html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                                <a class="page-link" href="?page=${i}">${i}</a>
+                             </li>`;
+                }
+
+                
+                if (currentPage < totalPages) {
+                    html += `<li class="page-item">
+                                <a class="page-link" href="?page=${currentPage + 1}">...</a>
+                             </li>`;
+                }
+
+                html += '</ul></nav>';
+                paginationContainer.innerHTML = html;
+            }
+        });
+    </script>
+}
+
