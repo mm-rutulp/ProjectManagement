@@ -64,6 +64,7 @@ namespace ProjectManagement.Controllers
                     .Include(w => w.Project)
                     .Include(w => w.User)
                     .OrderByDescending(w => w.Date)
+                    .Where(w => !w.IsDeleted)
                     .Take(5)
                     .ToListAsync();
             }
