@@ -146,6 +146,7 @@ namespace ProjectManagement.Controllers
                     .Where(w => w.UserId == currentUser.Id)
                     .Include(w => w.Project)
                     .OrderByDescending(w => w.Date)
+                    .Where(w => !w.IsDeleted)
                     .Take(5)
                     .ToListAsync();
             }
