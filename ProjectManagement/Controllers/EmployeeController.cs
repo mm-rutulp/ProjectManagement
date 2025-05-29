@@ -24,7 +24,9 @@ namespace ProjectManagement.Controllers
         [HttpGet("Employee/Index")]
         public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
         {
-            var employees = await _userManager.GetUsersInRoleAsync("Employee");
+            var allEmployees = await _userManager.GetUsersInRoleAsync("Employee");
+            var employees = allEmployees.Where(e => e.IsDeleted == false).ToList();
+
             var paginated = employees.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
             ViewBag.CurrentPage = page;
@@ -196,42 +198,52 @@ namespace ProjectManagement.Controllers
                 return NotFound();
             }
 
-            // First remove any project assignments
+          
             var assignments = await _context.ProjectAssignments
                 .Where(pa => pa.UserId == id && !pa.IsDeleted)
                 .ToListAsync();
-            
-            _context.ProjectAssignments.RemoveRange(assignments);
-            
-            // Remove any shadow resource assignments where this user is the shadow resource
+
+            foreach (var assignment in assignments)
+            {
+                assignment.IsDeleted = true;
+            }
+
             var shadowAssignments = await _context.ProjectShadowResourceAssignments
-                .Where(psa => psa.ShadowResourceId == id)
+                .Where(psa => psa.ShadowResourceId == id && !psa.IsDeleted)
                 .ToListAsync();
-                
-            _context.ProjectShadowResourceAssignments.RemoveRange(shadowAssignments);
-            
-            // Remove any shadow resource assignments where this user added the shadow resource
+
+            foreach (var shadowAssignment in shadowAssignments)
+            {
+                shadowAssignment.IsDeleted = true;
+            }
+
+
             var onboardedShadowAssignments = await _context.ProjectShadowResourceAssignments
-                .Where(psa => psa.ProjectOnBoardUserId == id)
+                .Where(psa => psa.ProjectOnBoardUserId == id && !psa.IsDeleted)
                 .ToListAsync();
-                
-            _context.ProjectShadowResourceAssignments.RemoveRange(onboardedShadowAssignments);
-            
-            // Update any worklogs with this shadow resource ID to clear the association
+
+            foreach (var onboardedShadowAssignment in onboardedShadowAssignments)
+            {
+                onboardedShadowAssignment.IsDeleted = true;
+            }
+
+
             var shadowWorklogs = await _context.Worklogs
                 .Where(w => w.ShadowResourceId == id)
                 .ToListAsync();
-                
+
             foreach (var worklog in shadowWorklogs)
             {
                 worklog.ShadowResourceId = null;
                 worklog.IsShadowResourceWorklog = false;
             }
-            
+
+          
+            employee.IsDeleted = true;
+
             await _context.SaveChangesAsync();
 
-            // Then delete the user
-            var result = await _userManager.DeleteAsync(employee);
+            var result = await _userManager.UpdateAsync(employee);
             if (!result.Succeeded)
             {
                 foreach (var error in result.Errors)

@@ -1,6 +1,7 @@
 ﻿@using Microsoft.AspNetCore.Identity
 @using ProjectManagement.Models
 @inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
 
 @{
     ViewData["Title"] = "All Projects";
@@ -192,7 +193,25 @@
                         }
 
                     </ul>
-                    <partial name="_LoginPartial" />
+                    <ul class="navbar-nav">
+                        @if (SignInManager.IsSignedIn(User))
+                        {
+                            <li class="nav-item d-flex align-items-center">
+                                <span class="nav-link text-white me-2">
+                                    @(UserManager.GetUserAsync(User).Result?.FullName ?? User.Identity?.Name)
+                                </span>
+                                <form class="form-inline" asp-controller="Account" asp-action="Logout" method="post">
+                                    <button type="submit" class="btn text-white p-0">Logout</button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-white" asp-controller="Account" asp-action="Login">Login</a>
+                            </li>
+                        }
+                    </ul>
                 </div>
             </div>
         </nav>

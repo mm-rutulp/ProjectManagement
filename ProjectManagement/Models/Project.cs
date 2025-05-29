@@ -13,8 +13,10 @@ namespace ProjectManagement.Models
         [StringLength(100)]
         public string Name { get; set; } = string.Empty;
 
+        [Required]
         [StringLength(500)]
         public string? Description { get; set; }
+
 
         [DataType(DataType.Date)]
         public DateTime StartDate { get; set; }

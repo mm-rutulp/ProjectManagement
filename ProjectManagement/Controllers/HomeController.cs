@@ -103,25 +103,115 @@ namespace ProjectManagement.Controllers
                     .Where(w => w.UserId == currentUser.Id)
                     .CountAsync();
 
-                /* this will get total worklogs of regula users only
-                                 var currenttime = DateTime.UtcNow;
-                 var firstDayOfMonth = new DateTime(currenttime.Year, currenttime.Month, 1);
 
-                 var monthlyUserWorklogs = await _context.Worklogs
-                     .Where(w => w.UserId == currentUser.Id &&
-                                 w.Date >= firstDayOfMonth &&
-                                 !w.IsDeleted)
-                     .ToListAsync();
+                var currentUserId = currentUser.Id;
 
-                 viewModel.TotalHours = monthlyUserWorklogs.Sum(w => w.HoursWorked);
-                 */
-                var allUserWorklogs = await _context.Worklogs
-                    .Where(w => w.UserId == currentUser.Id)
-                    .ToListAsync();
-                
-                viewModel.TotalHours = allUserWorklogs.Sum(w => w.HoursWorked);
+                // Date filter — first day of current month
+                var currentTime = DateTime.UtcNow;
+                var firstDayOfMonth = new DateTime(currentTime.Year, currentTime.Month, 1);
 
-              
+                // Check if user is a regular employee
+                bool isRegular = await _context.ProjectAssignments
+                    .AnyAsync(pa => pa.UserId == currentUserId && !pa.IsDeleted);
+
+                // Check if user is a shadow resource
+                bool isShadow = await _context.ProjectShadowResourceAssignments
+                    .AnyAsync(psa => psa.ShadowResourceId == currentUserId && !psa.IsDeleted);
+
+                decimal totalHours = 0;
+
+                if (isRegular && isShadow)
+                {
+                    // Mixed role — worklogs as user and as shadow
+                    var logsAsUser = await _context.Worklogs
+                        .Where(w => w.UserId == currentUserId && !w.IsDeleted && w.Date >= firstDayOfMonth)
+                        .ToListAsync();
+
+                    var logsAsShadow = await _context.Worklogs
+                        .Where(w => w.IsShadowResourceWorklog && w.ShadowResourceId == currentUserId && !w.IsDeleted && w.Date >= firstDayOfMonth)
+                        .ToListAsync();
+
+                    totalHours = logsAsUser.Sum(w => w.HoursWorked) + logsAsShadow.Sum(w => w.HoursWorked);
+                }
+                else if (isRegular)
+                {
+                    var logsAsUser = await _context.Worklogs
+                        .Where(w => w.UserId == currentUserId && !w.IsDeleted && w.Date >= firstDayOfMonth)
+                        .ToListAsync();
+
+                    totalHours = logsAsUser.Sum(w => w.HoursWorked);
+                }
+                else if (isShadow)
+                {
+                    var logsAsShadow = await _context.Worklogs
+                        .Where(w => w.IsShadowResourceWorklog && w.ShadowResourceId == currentUserId && !w.IsDeleted && w.Date >= firstDayOfMonth)
+                        .ToListAsync();
+
+                    totalHours = logsAsShadow.Sum(w => w.HoursWorked);
+                }
+
+                viewModel.TotalHours = totalHours;
+
+
+                /*   var currentUserId = currentUser.Id;
+
+
+                    var currentTime = DateTime.UtcNow;
+                    var firstDayOfMonth = new DateTime(currentTime.Year, currentTime.Month, 1);
+
+                    // Projects as regular employee
+                    var regularProjectIds = await _context.ProjectAssignments
+                        .Where(pa => pa.UserId == currentUserId && !pa.IsDeleted)
+                        .Select(pa => pa.ProjectId)
+                        .Distinct()
+                        .ToListAsync();
+
+                    // Projects as shadow resource
+                    var shadowProjectIds = await _context.ProjectShadowResourceAssignments
+                        .Where(psa => psa.ShadowResourceId == currentUserId && !psa.IsDeleted)
+                        .Select(psa => psa.ProjectId)
+                        .Distinct()
+                        .ToListAsync();
+
+
+                    var assignedUserProjectId = _context.ProjectAssignments.Where(x => x.UserId == currentUserId).Select(x => x.ProjectId).ToList();
+
+                    decimal totalHours = _context.Worklogs.Where(x => assignedUserProjectId.Contains(x.ProjectId) && x.UserId == currentUserId).Sum(x => x.HoursWorked);
+
+
+                    var shadowResourceProjects = _context.ProjectShadowResourceAssignments
+                        .Where(x => x.ShadowResourceId == currentUserId)
+                        .ToDictionary(x => x.ProjectId, x => x.ProjectOnBoardUserId);
+
+                    totalHours += (from Worklog in _context.Worklogs
+                                   join shadowResource in shadowResourceProjects
+                                                         on new { Worklog.ProjectId, Worklog.UserId }
+                                                        equals new { ProjectId = shadowResource.Key, UserId = shadowResource.Value }
+                                   select Worklog.HoursWorked).Sum();
+
+                    */
+                //decimal totalHours = await _context.Worklogs
+                //    .Where(w =>
+                //        !w.IsDeleted &&
+                //        w.Date >= firstDayOfMonth &&
+                //        (
+                //            // Regular: user logs their own hours
+                //            (regularProjectIds.Contains(w.ProjectId) && w.UserId == currentUserId && !w.IsShadowResourceWorklog) ||
+
+                //            // Shadow submitted work on behalf of this user
+                //            (regularProjectIds.Contains(w.ProjectId) && w.UserId == currentUserId && w.IsShadowResourceWorklog) ||
+
+                //            // This user is a shadow resource logging for others
+                //            (shadowProjectIds.Contains(w.ProjectId) && w.ShadowResourceId == currentUserId && w.IsShadowResourceWorklog)
+                //        )
+                //    )
+                //    .SumAsync(w => (decimal?)w.HoursWorked) ?? 0;
+
+                viewModel.TotalHours = totalHours;
+
+
+
+
                 var regularProjects = await _context.ProjectAssignments
                     .Where(pa => pa.UserId == currentUser.Id && !pa.IsDeleted)
                     .Include(pa => pa.Project)
