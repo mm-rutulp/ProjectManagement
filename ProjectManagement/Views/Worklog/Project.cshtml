@@ -103,10 +103,10 @@
         <div class="table-responsive">
             <table class="table w-100">
                 <thead>
-                    <tr>
+                    <tr >
                         <th ></th> <!-- New arrow column -->
                         <th>Date</th>
-                        <th>Team Member</th>
+                        <th>Team Members</th>
                         <th>Hours</th>
                        
                     </tr>
@@ -171,6 +171,7 @@
                 row.hide();
             } else {
                 row.show();
+                
                 if (body.children().length === 1 && body.text().includes('Loading')) {
                     $.ajax({
                         url: '/Worklog/GetWorklogDetails',
@@ -188,11 +189,11 @@
                                         details.forEach(log => {
                                         body.append(`
                                             <tr>
-                                               <td>${formatDateToDDMMYYYY(log.date)}</td>
-                                                <td>${log.userFullName}</td>
-                                                <td>${log.hoursWorked}</td>
+                                              
+                                               
                                                 <td>${log.taskType}</td>
                                                 <td>${log.description}</td>
+                                                <td>${log.hoursWorked}</td>
                                                        ${!isAdmin ? `
                                                             <td>
                                                                 <a href="/Worklog/Edit/${log.worklogId}" class="btn btn-sm btn-outline-primary me-1">
@@ -218,6 +219,24 @@
                 }
             }
         }
+
+        $('#worklogTableBody').on('click', '.meta-row', function (e) {
+            if ($(e.target).closest('button').length > 0) return;
+
+            const toggleId = $(this).data('toggle-id');
+            const detailRow = $(`#${toggleId}`);
+
+            // Extract userName and date from row content
+            const userName = $(this).find('td').eq(2).text().trim(); // 3rd column
+            const dateText = $(this).find('td').eq(1).text().trim(); // 2nd column
+            const [day, month, year] = dateText.split('/');
+            const date = `${year}-${month}-${day}`; // Convert to yyyy-MM-dd format
+
+            toggleDetails(toggleId, userName, date);
+
+            $(this).find('i.bi').toggleClass('bi-chevron-down bi-chevron-up');
+        });
+
 
 
          function formatDateToDDMMYYYY(dateString) {
@@ -291,7 +310,7 @@
                         const colspan = isAdmin ? 4 : 5;
 
                         const row = `
-                            <tr data-index="${index}" id="${rowId}">
+                             <tr data-index="${index}" id="${rowId}" class="meta-row" data-toggle-id="${toggleId} ">
                                 <td style="width: 40px; text-align: center; cursor: pointer;">
                                     <button class="btn btn-sm btn-link p-0" onclick="toggleDetails('${toggleId}', '${log.userFullName}', '${log.date}')">
                                         <i class="bi bi-chevron-down"></i>
@@ -306,19 +325,18 @@
                                 <td colspan="${colspan}">
                                     <div class="table-responsive">
                                         <table class="table table-bordered table-sm mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th>DATE</th>
-                                                    <th>TEAM MEMBER</th>
-                                                    <th>Hours</th>
-                                                    <th>Task Type</th>
-                                                    <th>Description</th>
-                                                    @if(!isAdmin)
-                                                    {
-                                                     <th>Actions</th>
-                                                    }
-                                                </tr>
-                                            </thead>
+                                                   <thead>
+                                                    <tr>
+                                                        
+                                                        <th>Task Type</th>
+                                                        <th>Description</th>
+                                                        <th>Hours</th>
+                                                        @if (!isAdmin)
+                                                        {
+                                                             <th>Actions</th>
+                                                        }
+                                                    </tr>
+                                                </thead>
                                             <tbody class="detail-body">
                                                 <tr><td colspan="5" class="text-center">Loading...</td></tr>
                                             </tbody>
