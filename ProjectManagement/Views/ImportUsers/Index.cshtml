@@ -34,6 +34,40 @@
             </div>
         </div>
     </div>
+    <h2>Employee Requests</h2>
+
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Employee Name</th>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var request in Model)
+            {
+                <tr>
+                    <td>@request.EmployeeName</td>
+                    <td>@request.Email</td>
+                    <td>
+                        @if (!request.IsCreated)
+                        {
+                            <form asp-action="MarkAsCreated" method="post" asp-controller="ImportUsers">
+                                <input type="hidden" name="id" value="@request.Id" />
+                                <button type="submit" class="btn btn-sm btn-primary">Add Employee</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <span class="text-success">✔ Added</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
 </div>
 
 @section Scripts {

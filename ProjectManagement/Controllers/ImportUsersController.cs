@@ -4,27 +4,133 @@ using MagnusMinds.Utility.EmailService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using ProjectManagement.Data;
 using ProjectManagement.Models;
 using ProjectManagement.Services;
 
 namespace ProjectManagement.Controllers
 {
-    [Authorize(Roles = "Admin")]
+
+   
     public class ImportUsersController : Controller
     {
+
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly ApplicationDbContext _context;
 
-        public ImportUsersController(UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager)
+        public ImportUsersController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager,ApplicationDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _context = context;
         }
 
+
+        [Authorize(Roles = "Admin")]
         public IActionResult Index()
         {
-            return View();
+            var employeeRequests = _context.EmployeeRegistration.ToList();
+            return View(employeeRequests);
+        }
+
+        //allow employee to be added 
+ 
+  
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        public async Task<IActionResult> MarkAsCreated(int id)
+        {
+            var employee = await _context.EmployeeRegistration.FindAsync(id);
+            if (employee == null)
+            {
+                return NotFound();
+            }
+
+            // Check if the user already exists
+            var existingUser = await _userManager.FindByEmailAsync(employee.Email);
+            if (existingUser == null)
+            {
+                var password = GenerateRandomPassword();
+
+                var newUser = new ApplicationUser
+                {
+                    UserName = employee.Email,
+                    Email = employee.Email,
+                    FullName = employee.EmployeeName
+                    // Department, Position, etc. left as null
+                };
+
+                var result = await _userManager.CreateAsync(newUser, password);
+
+                if (result.Succeeded)
+                {
+                    // Optional: Assign to default role
+                    await _userManager.AddToRoleAsync(newUser, "Employee");
+
+                    // Send email with credentials
+                    var emailSender = new EmailSender(new EmailConfiguration
+                    {
+                        From = "mmdevs365@gmail.com",
+                        Password = "naoo zxav gvsd lfpe",
+                        Port = 465,
+                        SmtpServer = "smtp.gmail.com",
+                        UserName = "mmdevs365@gmail.com",
+                        UseSSL = true
+                    });
+
+                    string subject = "Welcome to the Project Management System";
+                    string htmlContent = $@"
+                    <p>Dear {employee.EmployeeName},</p>
+                    <p>Your account has been created.</p>
+                    <p><strong>Email:</strong> {employee.Email}</p>
+                    <p><strong>Password:</strong> {password}</p>
+                    <p>Login: <a href='https://pms.magnusminds.net/'>Project Management Portal</a></p>";
+
+                    var emailHelper = new EmailHelper(emailSender);
+                    await emailHelper.SendEmail(subject, htmlContent, new List<string> { employee.Email });
+
+                    // ✅ Mark employee as created in your table
+                    employee.IsCreated = true;
+                    await _context.SaveChangesAsync();
+
+                    TempData["Success"] = "User created and notified successfully.";
+                }
+                else
+                {
+                    TempData["Error"] = "User creation failed: " + string.Join(", ", result.Errors.Select(e => e.Description));
+                }
+            }
+            else
+            {
+                TempData["Error"] = "User already exists.";
+            }
+
+            return RedirectToAction("Index");
+        }
+
+
+        // Non-admin form (GET)
+        [AllowAnonymous]
+        [HttpGet]
+        public IActionResult RequestEmployee()
+        {
+            return View("EmployeeRegistration");
+        }
+
+        [AllowAnonymous]
+        [HttpPost]
+        public async Task<IActionResult> RequestEmployee(EmployeeRegistration model)
+        {
+            if (ModelState.IsValid)
+            {
+                _context.EmployeeRegistration.Add(model);
+                await _context.SaveChangesAsync();
+                TempData["Success"] = "Request submitted successfully.";
+                return RedirectToAction("RequestEmployee");
+            }
+
+            return View("EmployeeRegistration",model);
         }
 
         [HttpPost("upload")]

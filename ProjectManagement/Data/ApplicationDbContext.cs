@@ -17,6 +17,8 @@ namespace ProjectManagement.Data
         public DbSet<Worklog> Worklogs { get; set; }
         public DbSet<MonthlySummary> MonthlySummaries { get; set; }
 
+        public DbSet<EmployeeRegistration> EmployeeRegistration { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
