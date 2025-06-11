@@ -202,9 +202,9 @@ namespace ProjectManagement.Controllers
             var headerRow = worksheet.Range("A1:E1");
             worksheet.Cell(1, 1).Value = "Date";
             worksheet.Cell(1, 2).Value = "User";
-            worksheet.Cell(1, 3).Value = "Hours Worked";
-            worksheet.Cell(1, 4).Value = "Task Type";
-            worksheet.Cell(1, 5).Value = "Description";
+            worksheet.Cell(1, 3).Value = "Task Type";
+            worksheet.Cell(1, 4).Value = "Description";
+            worksheet.Cell(1, 5).Value = "Hours Worked";
 
             headerRow.Style.Font.Bold = true;
             headerRow.Style.Fill.BackgroundColor = XLColor.LightGreen;
@@ -213,9 +213,9 @@ namespace ProjectManagement.Controllers
             {
                 worksheet.Cell(row, 1).Value = w.Date.ToString("yyyy-MM-dd");
                 worksheet.Cell(row, 2).Value = w.User.FullName;
-                worksheet.Cell(row, 3).Value = w.HoursWorked;
-                worksheet.Cell(row, 4).Value = w.TaskType;
-                worksheet.Cell(row, 5).Value = w.Description;
+                worksheet.Cell(row, 3).Value = w.TaskType;
+                worksheet.Cell(row, 4).Value = w.Description;
+                worksheet.Cell(row, 5).Value = w.HoursWorked;
                 row++;
             }
 
