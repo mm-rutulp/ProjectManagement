@@ -193,8 +193,9 @@
                                                
                                                 <td>${log.taskType}</td>
                                                 <td>${log.description}</td>
+                                                 <td>${log.status}</td> 
                                                 <td>${log.hoursWorked}</td>
-                                                <td>${log.status}</td> 
+
 
                                                        ${!isAdmin ? `
                                                             <td>
@@ -321,7 +322,7 @@
                                 <td>${formattedDate}</td>
                                 <td>${log.userFullName}</td>
                                 <td>${log.totalHours}</td>
-                                <td>${log.status}</td>
+                                
 
                                 ${!isAdmin ? '<td></td>' : ''}
                             </tr>
@@ -334,8 +335,8 @@
                                                         
                                                         <th>Task Type</th>
                                                         <th>Description</th>
-                                                        <th>Hours</th>
                                                         <th>Status</th>
+                                                        <th>Hours</th>
                                                         @if (!isAdmin)
                                                         {
                                                              <th>Actions</th>
