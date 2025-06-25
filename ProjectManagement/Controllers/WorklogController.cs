@@ -199,12 +199,13 @@ namespace ProjectManagement.Controllers
             var worksheet = workbook.Worksheets.Add("Worklogs");
 
             // Header
-            var headerRow = worksheet.Range("A1:E1");
+            var headerRow = worksheet.Range("A1:F1");
             worksheet.Cell(1, 1).Value = "Date";
             worksheet.Cell(1, 2).Value = "User";
             worksheet.Cell(1, 3).Value = "Task Type";
             worksheet.Cell(1, 4).Value = "Description";
             worksheet.Cell(1, 5).Value = "Hours Worked";
+            worksheet.Cell(1, 6).Value = "Status";
 
             headerRow.Style.Font.Bold = true;
             headerRow.Style.Fill.BackgroundColor = XLColor.LightGreen;
@@ -216,6 +217,7 @@ namespace ProjectManagement.Controllers
                 worksheet.Cell(row, 3).Value = w.TaskType;
                 worksheet.Cell(row, 4).Value = w.Description;
                 worksheet.Cell(row, 5).Value = w.HoursWorked;
+                worksheet.Cell(row, 6).Value = w.Status;
                 row++;
             }
 
@@ -242,6 +244,7 @@ namespace ProjectManagement.Controllers
                     date = w.Date,
                     userFullName = w.User.FullName,
                     hoursWorked = w.HoursWorked,
+                    status= w.Status,
                     taskType = w.TaskType,
                     description = w.Description,
                    
@@ -280,6 +283,7 @@ namespace ProjectManagement.Controllers
                     User = w.User.FullName,
                     w.HoursWorked,
                     w.TaskType,
+                    w.Status,
                     w.Description
                 })
                 .ToListAsync();
@@ -325,7 +329,8 @@ namespace ProjectManagement.Controllers
                 ProjectId = id.Value,
                 ProjectName = project.Name,
                 Date = DateTime.Today,
-                UserId = currentUser.Id // Default to current user
+                UserId = currentUser.Id, // Default to current user
+                Status ="Pending"
             };
 
             // If the user is a shadow resource for this project, populate the dropdown with users who added them
@@ -383,6 +388,7 @@ namespace ProjectManagement.Controllers
                     Description = model.Description,
                     TaskType = model.TaskType,
                     CreatedAt = DateTime.Now,
+                    Status= model.Status,
                     IsShadowResourceWorklog = model.UserId != currentUser.Id,
                     ShadowResourceId = model.UserId != currentUser.Id ? currentUser.Id : null
                 };
@@ -450,7 +456,8 @@ namespace ProjectManagement.Controllers
                 HoursWorked = worklog.HoursWorked,
                 Description = worklog.Description,
                 TaskType = worklog.TaskType,
-                AvailableUsers = availableUsers
+                AvailableUsers = availableUsers,
+                Status = worklog.Status
             };
 
             return View("Create",viewModel);
@@ -486,6 +493,7 @@ namespace ProjectManagement.Controllers
                 worklog.HoursWorked = model.HoursWorked;
                 worklog.Description = model.Description;
                 worklog.TaskType = model.TaskType;
+                worklog.Status = model.Status;
                 worklog.UpdatedAt = DateTime.Now;
 
                 _context.Update(worklog);

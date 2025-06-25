@@ -12,8 +12,8 @@ using ProjectManagement.Data;
 namespace ProjectManagement.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250617073454_UpdateWorklogTable")]
-    partial class UpdateWorklogTable
+    [Migration("20250625065724_AddStatusToWorklog")]
+    partial class AddStatusToWorklog
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -453,6 +453,10 @@ namespace ProjectManagement.Migrations
 
                     b.Property<string>("ShadowResourceId")
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TaskType")
                         .HasMaxLength(50)

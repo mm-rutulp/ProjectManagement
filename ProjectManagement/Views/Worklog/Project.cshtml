@@ -194,6 +194,8 @@
                                                 <td>${log.taskType}</td>
                                                 <td>${log.description}</td>
                                                 <td>${log.hoursWorked}</td>
+                                                <td>${log.status}</td> 
+
                                                        ${!isAdmin ? `
                                                             <td>
                                                                 <a href="/Worklog/Edit/${log.worklogId}" class="btn btn-sm btn-outline-primary me-1">
@@ -319,6 +321,8 @@
                                 <td>${formattedDate}</td>
                                 <td>${log.userFullName}</td>
                                 <td>${log.totalHours}</td>
+                                <td>${log.status}</td>
+
                                 ${!isAdmin ? '<td></td>' : ''}
                             </tr>
                             <tr id="${toggleId}" class="detail-row" style="display: none;">
@@ -331,6 +335,7 @@
                                                         <th>Task Type</th>
                                                         <th>Description</th>
                                                         <th>Hours</th>
+                                                        <th>Status</th>
                                                         @if (!isAdmin)
                                                         {
                                                              <th>Actions</th>

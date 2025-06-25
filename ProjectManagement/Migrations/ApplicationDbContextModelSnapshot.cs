@@ -451,6 +451,10 @@ namespace ProjectManagement.Migrations
                     b.Property<string>("ShadowResourceId")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("TaskType")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
