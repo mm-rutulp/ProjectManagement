@@ -70,6 +70,9 @@ namespace ProjectManagement.ViewModels
         [Display(Name = "User")]
         public string UserId { get; set; } = string.Empty;
 
+        [Required]
+        [Display(Name ="Status")]
+        public string Status { get; set; }
         public ICollection<ApplicationUser> AvailableUsers { get; set; } = new List<ApplicationUser>();
     }
 

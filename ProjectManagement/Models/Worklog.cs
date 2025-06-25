@@ -28,6 +28,9 @@ namespace ProjectManagement.Models
         public DateTime Date { get; set; }
 
         [Required]
+        public string Status { get; set; }
+
+        [Required]
         [Range(0.1, 24)]
         public decimal HoursWorked { get; set; }
 
