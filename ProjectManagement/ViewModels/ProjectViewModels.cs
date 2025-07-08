@@ -54,7 +54,7 @@ namespace ProjectManagement.ViewModels
         public DateTime Date { get; set; } = DateTime.Today;
 
         [Required]
-        [Range(0.1, 24)]
+        [Range(0.0, 24)]
         [Display(Name = "Hours Worked")]
         public decimal HoursWorked { get; set; }
 
