@@ -37,14 +37,14 @@
                             <select asp-for="TaskType" class="form-control" id="taskType">
                                 <option value="">-- Select Task Type --</option>
                                 <option value="Development">Development</option>
-                                <option value="Testing">Testing</option>
                                 <option value="Documentation">Documentation</option>
+                                <option value="Holiday">Holiday</option>
+                                <option value="Leave">Leave</option>
                                 <option value="Meeting">Meeting</option>
+                                <option value="Other">Other</option>
                                 <option value="Planning">Planning</option>
                                 <option value="Research">Research</option>
-                                <option value="Leave">Leave</option>
-                                <option value="Holiday">Holiday</option>
-                                <option value="Other">Other</option>
+                                <option value="Testing">Testing</option>
                             </select>
                             <span asp-validation-for="TaskType" class="text-danger"></span>
                         </div>
