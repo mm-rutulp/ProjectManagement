@@ -123,9 +123,7 @@ namespace ProjectManagement.Controllers
 
             return View(viewModel);
         }
-
-
-        
+       
         [HttpGet]
         public async Task<IActionResult> GetWorklogs(int id, string? userId, DateTime? startDate, DateTime? endDate, int page = 1, int pageSize = 10)
         {
@@ -144,12 +142,14 @@ namespace ProjectManagement.Controllers
                 query = query.Where(w => w.Date <= endDate.Value);
 
             var groupedData = await query
-                .GroupBy(w => new { w.User.FullName, w.Date })
+                .GroupBy(w => new { w.UserId, w.User.FullName, w.Date })
                 .Select(g => new
                 {
                     date = g.Key.Date,
                     userFullName = g.Key.FullName,
-                    totalHours = g.Sum(x => x.HoursWorked)
+                    userId = g.Key.UserId,
+                    totalHours = g.Sum(x => x.HoursWorked),
+                   
 
                 })
                 .OrderByDescending(g => g.date)
@@ -169,7 +169,6 @@ namespace ProjectManagement.Controllers
                 pageSize
             });
         }
-
 
         [HttpGet]
         public async Task<IActionResult> DownloadWorklogsExcel(int id, string? userId, DateTime? startDate, DateTime? endDate)
@@ -766,5 +765,188 @@ namespace ProjectManagement.Controllers
             
             return RedirectToAction(nameof(MonthlySummary), new { id = model.ProjectId });
         }
+        
+        // GET: Worklog/CreateBulk/5
+        [HttpGet]
+        public async Task<IActionResult> CreateBulk(int? id)
+        {
+            if (id == null)
+                return NotFound();
+
+            var project = await _context.Projects.FindAsync(id);
+            if (project == null)
+                return NotFound();
+
+            var currentUser = await _userManager.GetUserAsync(User);
+
+            // Check project access
+            var hasAccess = await _context.ProjectAssignments
+                .AnyAsync(pa => pa.ProjectId == id && pa.UserId == currentUser.Id) ||
+                await _context.ProjectShadowResourceAssignments
+                .AnyAsync(psa => psa.ProjectId == id && psa.ShadowResourceId == currentUser.Id);
+
+            if (!hasAccess)
+                return Forbid();
+
+            var shadowAssignments = await _context.ProjectShadowResourceAssignments
+                .Where(psa => psa.ProjectId == id && psa.ShadowResourceId == currentUser.Id)
+                .Include(psa => psa.ProjectOnBoardUser)
+                .ToListAsync();
+
+            var viewModel = new WorklogBulkCreateViewModel
+            {
+                ProjectId = id.Value,
+                ProjectName = project.Name,
+                UserId = currentUser.Id,
+                Date = DateTime.Today,
+                AvailableUsers = shadowAssignments.Any()
+                    ? shadowAssignments.Select(psa => psa.ProjectOnBoardUser).Distinct().ToList()
+                    : new List<ApplicationUser> { currentUser },
+                Worklogs = new List<WorklogRowInput> { new WorklogRowInput() } // at least one row
+            };
+
+            return View(viewModel);
+        }
+
+        // GET: Worklog/CreateBulk/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateBulk(WorklogBulkCreateViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var currentUser = await _userManager.GetUserAsync(User);
+
+            var hasAccess = await _context.ProjectAssignments
+                .AnyAsync(pa => pa.ProjectId == model.ProjectId && pa.UserId == currentUser.Id) ||
+                await _context.ProjectShadowResourceAssignments
+                .AnyAsync(psa => psa.ProjectId == model.ProjectId && psa.ShadowResourceId == currentUser.Id);
+
+            if (!hasAccess)
+            {
+                return Forbid();
+            }
+
+            var isValidUser = await _context.ProjectShadowResourceAssignments
+                .AnyAsync(psa => psa.ProjectId == model.ProjectId &&
+                                 psa.ShadowResourceId == currentUser.Id &&
+                                 psa.ProjectOnBoardUserId == model.UserId);
+
+            if (!isValidUser && model.UserId != currentUser.Id)
+            {
+                ModelState.AddModelError("UserId", "Invalid user selection");
+                return View(model);
+            }
+
+            var worklogsToAdd = model.Worklogs.Select(w => new Worklog
+            {
+                ProjectId = model.ProjectId,
+                UserId = model.UserId,
+                Date = model.Date,
+                HoursWorked = w.HoursWorked,
+                Description = w.Description,
+                TaskType = w.TaskType,
+                Status = w.Status,
+                CreatedAt = DateTime.UtcNow,
+                IsShadowResourceWorklog = model.UserId != currentUser.Id,
+                ShadowResourceId = model.UserId != currentUser.Id ? currentUser.Id : null
+            }).ToList();
+
+            _context.Worklogs.AddRange(worklogsToAdd);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction("Project", "Worklog", new { id = model.ProjectId });
+        }
+
+        // GET: Worklog/EditBulkWorklogs/projectId=7&userId=uid&date=2025-07-09T00:00:005
+        [HttpGet]
+        public async Task<IActionResult> EditBulkWorklogs(int projectId, string userId, DateTime date)
+        {
+            var project = await _context.Projects.FindAsync(projectId);
+            if (project == null) return NotFound();
+
+            var currentUser = await _userManager.GetUserAsync(User);
+
+            var hasAccess = await _context.ProjectAssignments
+                .AnyAsync(pa => pa.ProjectId == projectId && pa.UserId == currentUser.Id) ||
+                await _context.ProjectShadowResourceAssignments
+                .AnyAsync(psa => psa.ProjectId == projectId && psa.ShadowResourceId == currentUser.Id);
+
+            if (!hasAccess) return Forbid();
+
+            var shadowAssignments = await _context.ProjectShadowResourceAssignments
+                .Where(psa => psa.ProjectId == projectId && psa.ShadowResourceId == currentUser.Id)
+                .Include(psa => psa.ProjectOnBoardUser)
+                .ToListAsync();
+
+            var availableUsers = shadowAssignments.Any()
+                ? shadowAssignments.Select(psa => psa.ProjectOnBoardUser).Distinct().ToList()
+                : new List<ApplicationUser> { currentUser };
+
+            var worklogs = await _context.Worklogs
+                .Where(w => w.ProjectId == projectId && w.UserId == userId && w.Date == date && !w.IsDeleted)
+                .ToListAsync();
+
+            var viewModel = new WorklogBulkCreateViewModel
+            {
+                ProjectId = projectId,
+                ProjectName = project.Name,
+                UserId = userId,
+                Date = date,
+                AvailableUsers = availableUsers,
+                Worklogs = worklogs.Select(w => new WorklogRowInput
+                {
+                    Id = w.Id,
+                    HoursWorked = w.HoursWorked,
+                    Description = w.Description,
+                    Status = w.Status,
+                    TaskType = w.TaskType
+                }).ToList()
+            };
+
+            return View("CreateBulk", viewModel);
+        }
+
+        // GET: Worklog/EditBulkWorklogs/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditBulkWorklogs(WorklogBulkCreateViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View("CreateBulk", model);
+
+            var currentUser = await _userManager.GetUserAsync(User);
+
+            var hasAccess = await _context.ProjectAssignments
+                .AnyAsync(pa => pa.ProjectId == model.ProjectId && pa.UserId == currentUser.Id) ||
+                await _context.ProjectShadowResourceAssignments
+                .AnyAsync(psa => psa.ProjectId == model.ProjectId && psa.ShadowResourceId == currentUser.Id);
+
+            if (!hasAccess)
+                return Forbid();
+
+            foreach (var row in model.Worklogs)
+            {
+                var worklog = await _context.Worklogs.FindAsync(row.Id);
+                if (worklog == null || worklog.UserId != model.UserId || worklog.ProjectId != model.ProjectId)
+                    continue;
+
+                // Optional: permission check per worklog (e.g., only owner or shadow can edit)
+                worklog.TaskType = row.TaskType;
+                worklog.Status = row.Status;
+                worklog.HoursWorked = row.HoursWorked;
+                worklog.Description = row.Description;
+                worklog.UpdatedAt = DateTime.UtcNow;
+
+                _context.Update(worklog);
+            }
+
+            await _context.SaveChangesAsync();
+            return RedirectToAction("Project", new { id = model.ProjectId });
+        }
+
     }
 } 

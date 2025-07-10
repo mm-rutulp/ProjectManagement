@@ -110,6 +110,43 @@ namespace ProjectManagement.ViewModels
         public List<ProjectTeamMemberViewModel> ShadowTeamMembers { get; set; } = new();
     }
 
+    public class WorklogBulkCreateViewModel
+    {
+        public int ProjectId { get; set; }
+        public string ProjectName { get; set; } = string.Empty;
 
+        [Required]
+        [Display(Name = "User")]
+        public string UserId { get; set; } = string.Empty;
+
+        [Required]
+        [DataType(DataType.Date)]
+        [Display(Name = "Work Date")]
+        public DateTime Date { get; set; } = DateTime.Today;
+
+        public ICollection<ApplicationUser> AvailableUsers { get; set; } = new List<ApplicationUser>();
+
+        [Required]
+        public List<WorklogRowInput> Worklogs { get; set; } = new();  // Editable table rows
+    }
+
+    public class WorklogRowInput
+    {
+       
+        [Required]
+        [Display(Name = "Task Type")]
+        public string TaskType { get; set; } = string.Empty;
+        [Required]
+        [Display(Name = "Status")]
+        public string Status { get; set; } = string.Empty;
+        [Required]
+        [Range(0.1, 24, ErrorMessage = "Hours Required")]
+        [Display(Name = "Hours Worked")]
+        public decimal HoursWorked { get; set; }
+        [Required]
+        [Display(Name = "Description")]
+        public string Description { get; set; } = string.Empty;
+        public int Id { get; set; }
+    }
 
 }

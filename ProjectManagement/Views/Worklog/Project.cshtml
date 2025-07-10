@@ -94,9 +94,14 @@
         <h5 class="mb-0">Worklog Entries</h5>
         @if (!isAdmin)
         {
-            <a asp-action="Create" asp-route-id="@Model.ProjectId" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Add Worklog
-            </a>
+            <div class="btn-group">
+               <!-- <a asp-action="Create" asp-route-id="@Model.ProjectId" class="btn btn-primary">
+                     <i class="bi bi-plus-circle"></i> Add Worklog
+                 </a>-->
+                <a asp-action="CreateBulk" asp-route-id="@Model.ProjectId" class="btn btn-primary">
+                    <i class="bi bi-layers"></i> Add Worklogs
+                </a>
+            </div>
         }
     </div>
     <div class="card-body">
@@ -108,6 +113,10 @@
                         <th>Date</th>
                         <th>Team Members</th>
                         <th>Hours</th>
+                        @if (!isAdmin)
+                        {
+                            <th style="width: 80px;">Action</th>
+                        }
                        
                     </tr>
                 </thead>
@@ -199,9 +208,7 @@
 
                                                        ${!isAdmin ? `
                                                             <td>
-                                                                <a href="/Worklog/Edit/${log.worklogId}" class="btn btn-sm btn-outline-primary me-1">
-                                                                    <i class="bi bi-pencil"></i>
-                                                                </a>
+                                                              
                                                                 <form action="/Worklog/Delete/${log.worklogId}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this worklog?');">
                                                                     <input name="__RequestVerificationToken" type="hidden" value="${antiForgeryToken}" />
                                                                     <button type="submit" class="btn btn-sm btn-outline-danger">
@@ -322,9 +329,15 @@
                                 <td>${formattedDate}</td>
                                 <td>${log.userFullName}</td>
                                 <td>${log.totalHours}</td>
-                                
 
-                                ${!isAdmin ? '<td></td>' : ''}
+
+                         ${!isAdmin ? 
+                             `<td>
+                                    <a href="/Worklog/EditBulkWorklogs?projectId=${projectId}&userId=${log.userId}&date=${log.date}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                             </td>` : ''}
                             </tr>
                             <tr id="${toggleId}" class="detail-row" style="display: none;">
                                 <td colspan="${colspan}">
