@@ -808,7 +808,7 @@ namespace ProjectManagement.Controllers
             return View(viewModel);
         }
 
-        // GET: Worklog/CreateBulk/5
+        // POST: Worklog/CreateBulk/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateBulk(WorklogBulkCreateViewModel model)
@@ -869,26 +869,40 @@ namespace ProjectManagement.Controllers
             if (project == null) return NotFound();
 
             var currentUser = await _userManager.GetUserAsync(User);
+            var currentUserId = currentUser.Id;
+            var isAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
 
-            var hasAccess = await _context.ProjectAssignments
-                .AnyAsync(pa => pa.ProjectId == projectId && pa.UserId == currentUser.Id) ||
-                await _context.ProjectShadowResourceAssignments
-                .AnyAsync(psa => psa.ProjectId == projectId && psa.ShadowResourceId == currentUser.Id);
+            var worklogs = await _context.Worklogs
+                .Where(w => w.ProjectId == projectId && w.UserId == userId && w.Date == date && !w.IsDeleted)
+                .ToListAsync();
 
-            if (!hasAccess) return Forbid();
+            if (!worklogs.Any())
+            {
+                TempData["UnauthorizedMessage"] = "No worklogs found for this date.";
+                return RedirectToAction("Project", new { id = projectId });
+            }
+
+            var isShadowResource = await _context.ProjectShadowResourceAssignments.AnyAsync(psa =>
+                psa.ProjectId == projectId &&
+                psa.ShadowResourceId == currentUserId &&
+                psa.ProjectOnBoardUserId == userId &&
+                !psa.IsDeleted);
+
+            // Authorization
+            if (!isAdmin && currentUserId != userId && !isShadowResource)
+            {
+                TempData["UnauthorizedMessage"] = "You are not authorized to edit these worklogs.";
+                return RedirectToAction("Project", new { id = projectId });
+            }
 
             var shadowAssignments = await _context.ProjectShadowResourceAssignments
-                .Where(psa => psa.ProjectId == projectId && psa.ShadowResourceId == currentUser.Id)
+                .Where(psa => psa.ProjectId == projectId && psa.ShadowResourceId == currentUserId)
                 .Include(psa => psa.ProjectOnBoardUser)
                 .ToListAsync();
 
             var availableUsers = shadowAssignments.Any()
                 ? shadowAssignments.Select(psa => psa.ProjectOnBoardUser).Distinct().ToList()
                 : new List<ApplicationUser> { currentUser };
-
-            var worklogs = await _context.Worklogs
-                .Where(w => w.ProjectId == projectId && w.UserId == userId && w.Date == date && !w.IsDeleted)
-                .ToListAsync();
 
             var viewModel = new WorklogBulkCreateViewModel
             {
@@ -910,7 +924,7 @@ namespace ProjectManagement.Controllers
             return View("CreateBulk", viewModel);
         }
 
-        // GET: Worklog/EditBulkWorklogs/5
+        // POST: Worklog/EditBulkWorklogs/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditBulkWorklogs(WorklogBulkCreateViewModel model)
@@ -919,22 +933,26 @@ namespace ProjectManagement.Controllers
                 return View("CreateBulk", model);
 
             var currentUser = await _userManager.GetUserAsync(User);
-
-            var hasAccess = await _context.ProjectAssignments
-                .AnyAsync(pa => pa.ProjectId == model.ProjectId && pa.UserId == currentUser.Id) ||
-                await _context.ProjectShadowResourceAssignments
-                .AnyAsync(psa => psa.ProjectId == model.ProjectId && psa.ShadowResourceId == currentUser.Id);
-
-            if (!hasAccess)
-                return Forbid();
+            var currentUserId = currentUser.Id;
+            var isAdmin = await _userManager.IsInRoleAsync(currentUser, "Admin");
 
             foreach (var row in model.Worklogs)
             {
                 var worklog = await _context.Worklogs.FindAsync(row.Id);
-                if (worklog == null || worklog.UserId != model.UserId || worklog.ProjectId != model.ProjectId)
+                if (worklog == null || worklog.IsDeleted || worklog.ProjectId != model.ProjectId)
                     continue;
 
-                // Optional: permission check per worklog (e.g., only owner or shadow can edit)
+                // Check if current user is allowed to edit this specific worklog
+                bool isOwner = worklog.UserId == currentUserId;
+                bool isShadow = worklog.IsShadowResourceWorklog && worklog.ShadowResourceId == currentUserId;
+
+                if (!isAdmin && !isOwner && !isShadow)
+                {
+                    TempData["UnauthorizedMessage"] = "You are not authorized to edit one or more worklogs.";
+                    return RedirectToAction("Index", "Home");
+                }
+
+                // Passed checks, allow edit
                 worklog.TaskType = row.TaskType;
                 worklog.Status = row.Status;
                 worklog.HoursWorked = row.HoursWorked;
@@ -946,6 +964,26 @@ namespace ProjectManagement.Controllers
 
             await _context.SaveChangesAsync();
             return RedirectToAction("Project", new { id = model.ProjectId });
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteFromBulk(int id, long projectId, string userId, DateTime date)
+        {
+            var worklog = await _context.Worklogs.FindAsync(id);
+            if (worklog == null)
+            {
+                TempData["Error"] = "Worklog not found.";
+                return RedirectToAction("EditBulkWorklogs", new { projectId, userId, date });
+            }
+
+            // Soft delete (recommended)
+            worklog.IsDeleted = true;
+            _context.Worklogs.Update(worklog);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Worklog deleted successfully.";
+
+            return RedirectToAction("EditBulkWorklogs", new { projectId, userId, date });
         }
 
     }

@@ -136,7 +136,7 @@
     <script>
         const isAdmin = @(isAdmin.ToString().ToLower());
         const antiForgeryToken = $('#antiForgeryTokenHolder input[name="__RequestVerificationToken"]').val();
-
+        const currentUserId = '@currentUser.Id';
         const projectId = @Model.ProjectId;
         let currentPage = 1;
         const pageSize = 10;
@@ -331,7 +331,8 @@
                                 <td>${log.totalHours}</td>
 
 
-                         ${!isAdmin ? 
+
+                         ${!isAdmin  ?
                              `<td>
                                     <a href="/Worklog/EditBulkWorklogs?projectId=${projectId}&userId=${log.userId}&date=${log.date}"
                                        class="btn btn-sm btn-outline-primary">
