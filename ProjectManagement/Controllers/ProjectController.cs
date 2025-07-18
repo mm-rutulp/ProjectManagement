@@ -261,7 +261,7 @@ namespace ProjectManagement.Controllers
 
             if (isAdmin)
             {
-                employees = (await _userManager.GetUsersInRoleAsync("Employee")).ToList();
+                employees = (await _userManager.GetUsersInRoleAsync("Employee")).Where(u => !u.IsDeleted).ToList();
                 currentAssignments = await _context.ProjectAssignments
                     .Where(pa => pa.ProjectId == id && !pa.IsDeleted)
                     .Include(pa => pa.User)
@@ -275,7 +275,7 @@ namespace ProjectManagement.Controllers
             }
             else
             {
-                employees = (await _userManager.GetUsersInRoleAsync("Employee")).ToList();
+                employees = (await _userManager.GetUsersInRoleAsync("Employee")).Where(u => !u.IsDeleted).ToList();
                 var hasAccess = await _context.ProjectAssignments
                     .AnyAsync(pa => pa.ProjectId == id && pa.UserId == currentUser.Id && !pa.IsDeleted);
 

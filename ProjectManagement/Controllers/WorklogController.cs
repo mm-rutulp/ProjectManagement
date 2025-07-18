@@ -78,7 +78,7 @@ namespace ProjectManagement.Controllers
 
             // Get only regular team members for this project (excluding shadow resources)
             var projectMembers = await _context.ProjectAssignments
-                .Where(pa => pa.ProjectId == id)
+               .Where(pa => pa.ProjectId == id && !pa.User.IsDeleted)
                 .Include(pa => pa.User)
                 .Select(pa => pa.User)
                 .Distinct()
