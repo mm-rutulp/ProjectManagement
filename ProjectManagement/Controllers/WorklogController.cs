@@ -193,7 +193,7 @@ namespace ProjectManagement.Controllers
             if (endDate.HasValue)
                 query = query.Where(w => w.Date <= endDate.Value);
 
-            var worklogs = await query.OrderByDescending(w => w.Date).ToListAsync();
+            var worklogs = await query.OrderBy(w => w.User.FullName).ThenByDescending(w =>w.Date).ToListAsync();
 
             using var workbook = new ClosedXML.Excel.XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Worklogs");
@@ -204,7 +204,7 @@ namespace ProjectManagement.Controllers
             worksheet.Cell(1, 2).Value = "User";
             worksheet.Cell(1, 3).Value = "Task Type";
             worksheet.Cell(1, 4).Value = "Description";
-            worksheet.Cell(1, 5).Value = "Hours Worked";
+            worksheet.Cell(1, 5).Value = "Hours";
             worksheet.Cell(1, 6).Value = "Status";
 
             headerRow.Style.Font.Bold = true;

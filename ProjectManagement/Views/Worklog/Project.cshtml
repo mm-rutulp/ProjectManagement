@@ -187,12 +187,15 @@
                                 body.append('<tr><td colspan="3" class="text-center text-muted">No details found.</td></tr>');
                             } else {
                                         details.forEach(log => {
+                                            const formattedDescription = log.description
+                                                    ? log.description.replace(/(?:\r\n|\r|\n)/g, '<br>')
+                                                    : '';
                                         body.append(`
                                             <tr>
                                               
                                                
                                                 <td>${log.taskType}</td>
-                                                <td>${log.description}</td>
+                                                <td>${formattedDescription}</td>
                                                  <td>${log.status}</td> 
                                                 <td>${log.hoursWorked}</td>
 

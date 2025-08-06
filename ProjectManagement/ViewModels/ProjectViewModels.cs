@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using ProjectManagement.Models;
 using System.ComponentModel.DataAnnotations;
 
@@ -59,6 +60,8 @@ namespace ProjectManagement.ViewModels
         public decimal HoursWorked { get; set; }
 
         [Required]
+        [BindProperty]
+        [DataType(DataType.MultilineText)]
         public string Description { get; set; } = string.Empty;
 
         [Required]
