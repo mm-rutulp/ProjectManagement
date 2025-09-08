@@ -1,0 +1,220 @@
+﻿@model ProjectManagement.ViewModels.WorklogBulkCreateViewModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+
+@{
+    var isEdit = Model.Worklogs.Any(w => w.Id > 0);
+    ViewData["Title"] = isEdit ? "Edit Multiple Worklogs" : "Add Multiple Worklogs";
+}
+<div class="container">
+    <h1>@ViewData["Title"]</h1>
+    <h4>Project: @Model.ProjectName</h4>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <form asp-action="@(isEdit ? "EditBulkWorklogs" : "CreateBulk")" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                        <input type="hidden" asp-for="ProjectId" />
+                        <input type="hidden" asp-for="ProjectName" />
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label asp-for="UserId" class="form-label">User</label>
+                                <select asp-for="UserId" class="form-select" asp-items="@(new SelectList(Model.AvailableUsers, "Id", "FullName"))"></select>
+                                <span asp-validation-for="UserId" class="text-danger"></span>
+                                <label asp-for="Date" class="form-label">Work Date</label>
+
+                                @if (isEdit)
+                                {
+                                    <input asp-for="Date" type="date" class="form-control" readonly disabled />
+                                }
+                                else
+                                {
+                                    <input asp-for="Date" type="date" class="form-control" />
+                                }
+
+                                <span asp-validation-for="Date" class="text-danger"></span>
+
+                            </div>
+
+                            
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="worklogTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 20%;">Task Type</th>
+                                        <th style="width: 15%;">Status</th>
+                                        <th style="width: 10%;">Hours</th>
+                                        <th style="width: 50%;">Description</th>
+                                        <th style="width: 15%;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="worklogTableBody">
+                                    @for (int i = 0; i < Model.Worklogs.Count; i++)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <input type="hidden" asp-for="Worklogs[@i].Id" />
+                                                <select asp-for="Worklogs[@i].TaskType" class="form-control">
+                                                    <option value="">-- Select --</option>
+                                                    <option value="Development">Development</option>
+                                                    <option value="Testing">Testing</option>
+                                                    <option value="Documentation">Documentation</option>
+                                                    <option value="Meeting">Meeting</option>
+                                                    <option value="Planning">Planning</option>
+                                                    <option value="Research">Research</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                                <span asp-validation-for="Worklogs[@i].TaskType" class="text-danger"></span>
+                                            </td>
+                                            <td>
+                                                <select asp-for="Worklogs[@i].Status" class="form-control">
+                                                    <option value="">-- Select --</option>
+                                                    <option value="Pending">Pending</option>
+                                                    <option value="In Progress">In Progress</option>
+                                                    <option value="Completed">Completed</option>
+                                                </select>
+                                                <span asp-validation-for="Worklogs[@i].Status" class="text-danger"></span>
+                                            </td>
+                                            <td>
+                                                <input asp-for="Worklogs[@i].HoursWorked" class="form-control" />
+                                                <span asp-validation-for="Worklogs[@i].HoursWorked" class="text-danger"></span>
+                                            </td>
+                                            <td>
+                                                <textarea asp-for="Worklogs[@i].Description" class="form-control" rows="1"></textarea>
+                                                <span asp-validation-for="Worklogs[@i].Description" class="text-danger"></span>
+                                            </td>
+                                            <td class="text-center">
+                                                @if (Model.Worklogs[i].Id > 0)
+                                                {
+                                                    var deleteUrl = Url.Action("DeleteFromBulk", "Worklog", new
+                                                    {
+                                                        id = Model.Worklogs[i].Id,
+                                                        projectId = Model.ProjectId,
+                                                        userId = Model.UserId,
+                                                        date = Model.Date.ToString("yyyy-MM-dd")
+                                                    });
+                                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                                            onclick="submitDelete(@Model.Worklogs[i].Id, '@Model.ProjectId', '@Model.UserId', '@Model.Date.ToString("yyyy-MM-dd")')">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="row mt-4 align-items-center">
+                            <div class="col-md-8">
+                                <button type="button" class="btn btn-primary me-2" onclick="addRow()">+ Add Worklog</button>
+                                <button type="submit" class="btn btn-primary me-2">Save All</button>
+                                <a asp-action="Project" asp-route-id="@Model.ProjectId" class="btn btn-secondary">Back to Worklogs</a>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <strong>Total Hours: <span id="totalHours">0</span></strong>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    <form id="bulkDeleteForm" method="post" action="/Worklog/DeleteFromBulk" style="display:none;">
+        <input type="hidden" name="__RequestVerificationToken" value="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+        <input type="hidden" name="id" />
+        <input type="hidden" name="projectId" />
+        <input type="hidden" name="userId" />
+        <input type="hidden" name="date" />
+    </form>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.getElementById('worklogTableBody').addEventListener('input', updateTotalHours);
+            updateTotalHours();
+        });
+
+        function updateTotalHours() {
+            let total = 0;
+            document.querySelectorAll('input[name*="HoursWorked"]').forEach(input => {
+                const val = parseFloat(input.value);
+                if (!isNaN(val)) {
+                    total += val;
+                }
+            });
+            document.getElementById("totalHours").textContent = total.toFixed(1);
+        }
+
+        function addRow() {
+            const index = document.querySelectorAll('#worklogTableBody tr').length;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <select name="Worklogs[${index}].TaskType" class="form-control">
+                        <option value="">-- Select --</option>
+                        <option value="Development">Development</option>
+                        <option value="Testing">Testing</option>
+                        <option value="Documentation">Documentation</option>
+                        <option value="Meeting">Meeting</option>
+                        <option value="Planning">Planning</option>
+                        <option value="Research">Research</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </td>
+                <td>
+                    <select name="Worklogs[${index}].Status" class="form-control">
+                        <option value="">-- Select --</option>
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="number" name="Worklogs[${index}].HoursWorked" class="form-control" step="0.1" min="0.1" max="24" oninput="updateTotalHours()" />
+                </td>
+                <td>
+                    <textarea name="Worklogs[${index}].Description" class="form-control" rows="1"></textarea>
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            document.getElementById('worklogTableBody').appendChild(row);
+            updateTotalHours();
+        }
+
+        function submitDelete(id, projectId, userId, date) {
+            if (!confirm('Are you sure you want to delete this worklog?')) return;
+
+            const form = document.getElementById('bulkDeleteForm');
+            form.querySelector('[name="id"]').value = id;
+            form.querySelector('[name="projectId"]').value = projectId;
+            form.querySelector('[name="userId"]').value = userId;
+            form.querySelector('[name="date"]').value = date;
+            form.submit();
+        }
+
+
+        function removeRow(button) {
+            const row = button.closest('tr');
+            row.remove();
+            updateTotalHours();
+        }
+    </script>
+}
